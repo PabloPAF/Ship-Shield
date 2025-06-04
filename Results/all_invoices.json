@@ -1,0 +1,143 @@
+[
+  {
+    "invoice_number": "62005229",
+    "invoice_date": "03/05/2018",
+    "due_date": null,
+    "billing_address": "Chapman LLC, 3612 Rodriguez Union, Hilltown, NE 56109",
+    "shipping_address": null,
+    "vendor_name": "Harmon LLC",
+    "customer_name": "Chapman LLC",
+    "line_items": [
+      {
+        "description": "4 Tupperware Wine Stemless Cups Set Acrylic Plastic Shatter Proof Beverages New",
+        "quantity": 2.0,
+        "unit_price": 34.99,
+        "total_price": 69.98
+      }
+    ],
+    "subtotal": 69.98,
+    "tax": 7.0,
+    "total_amount": 76.98,
+    "currency": null
+  },
+  {
+    "invoice_number": "62005229",
+    "invoice_date": "03/05/2018",
+    "due_date": null,
+    "billing_address": "Chapman LLC, 3612 Rodriguez Union, Hilltown, NE 56109",
+    "shipping_address": null,
+    "vendor_name": "Harmon LLC",
+    "customer_name": "Chapman LLC",
+    "line_items": [
+      {
+        "description": "4 Tupperware Wine Stemless Cups Set Acrylic Plastic Shatter Proof Beverages New",
+        "quantity": 2.0,
+        "unit_price": 34.99,
+        "total_price": 69.98
+      }
+    ],
+    "subtotal": 69.98,
+    "tax": 7.0,
+    "total_amount": 76.98,
+    "currency": "USD"
+  },
+  {
+    "invoice_number": "INV113",
+    "invoice_date": "03-02-2025",
+    "due_date": null,
+    "billing_address": null,
+    "shipping_address": null,
+    "vendor_name": "\u0bb0\u0bbe\u0b95\u0bbe \u0baa\u0bc7\u0b95\u0bcd\u0b95\u0bb0\u0bbf & \u0bb0\u0bc6\u0bb8\u0bcd\u0b9f\u0bbe\u0bb0\u0ba9\u0bcd\u0b9f\u0bcd",
+    "customer_name": null,
+    "line_items": [
+      {
+        "description": "\u0baa\u0bbf\u0bb3\u0bae\u0bcd \u0b95\u0bc7\u0b95\u0bcd 1 \u0b95\u0bbf.",
+        "quantity": 1.0,
+        "unit_price": 350.0,
+        "total_price": 350.0
+      },
+      {
+        "description": "\u0baa\u0bbf\u0bb0\u0bc6\u0bb3\u0ba9\u0bbf",
+        "quantity": 3.0,
+        "unit_price": 40.0,
+        "total_price": 120.0
+      },
+      {
+        "description": "\u0bb8\u0bcd\u0baa\u0bbe\u0ba9\u0bcd\u0b9c\u0bcd \u0b95\u0bc7\u0b95\u0bcd 1 \u0b95\u0bbf.",
+        "quantity": 2.0,
+        "unit_price": 450.0,
+        "total_price": 900.0
+      }
+    ],
+    "subtotal": 1370.0,
+    "tax": 0.0,
+    "total_amount": 1370.0,
+    "currency": "Rs."
+  },
+  {
+    "invoice_number": "INV113",
+    "invoice_date": "03-02-2025",
+    "due_date": null,
+    "billing_address": null,
+    "shipping_address": null,
+    "vendor_name": "\u0bb0\u0bbe\u0b95\u0bbe \u0baa\u0bc7\u0b95\u0bcd\u0b95\u0bb0\u0bbf & \u0bb0\u0bc6\u0bb8\u0bcd\u0b9f\u0bbe\u0bb0\u0ba9\u0bcd\u0b9f\u0bcd",
+    "customer_name": null,
+    "line_items": [
+      {
+        "description": "\u0baa\u0bbf\u0bb3\u0bae\u0bcd \u0b95\u0bc7\u0b95\u0bcd 1 \u0b95\u0bbf.",
+        "quantity": 1.0,
+        "unit_price": 350.0,
+        "total_price": 350.0
+      },
+      {
+        "description": "\u0baa\u0bbf\u0bb0\u0bc6\u0bb3\u0ba9\u0bbf",
+        "quantity": 3.0,
+        "unit_price": 40.0,
+        "total_price": 120.0
+      },
+      {
+        "description": "\u0bb8\u0bcd\u0baa\u0bbe\u0ba9\u0bcd\u0b9c\u0bcd \u0b95\u0bc7\u0b95\u0bcd 1 \u0b95\u0bbf.",
+        "quantity": 2.0,
+        "unit_price": 450.0,
+        "total_price": 900.0
+      }
+    ],
+    "subtotal": 1370.0,
+    "tax": 196.38,
+    "total_amount": 1566.38,
+    "currency": "INR"
+  },
+  {
+    "invoice_number": "INV113",
+    "invoice_date": "03-02-2025",
+    "due_date": null,
+    "billing_address": null,
+    "shipping_address": null,
+    "vendor_name": "\u0bb0\u0bbe\u0b95\u0bbe \u0baa\u0bc7\u0b95\u0bcd\u0b95\u0bb0\u0bbf & \u0bb0\u0bc6\u0bb8\u0bcd\u0b9f\u0bbe\u0bb0\u0ba9\u0bcd\u0b9f\u0bcd",
+    "customer_name": null,
+    "line_items": [
+      {
+        "description": "\u0baa\u0bbf\u0bb3\u0bae\u0bcd \u0b95\u0bc7\u0b95\u0bcd 1 \u0b95\u0bbf.",
+        "quantity": 1.0,
+        "unit_price": 350.0,
+        "total_price": 350.0
+      },
+      {
+        "description": "\u0baa\u0bbf\u0bb0\u0bc6\u0bb3\u0ba9\u0bbf",
+        "quantity": 3.0,
+        "unit_price": 40.0,
+        "total_price": 120.0
+      },
+      {
+        "description": "\u0bb8\u0bcd\u0baa\u0bbe\u0ba9\u0bcd\u0b9c\u0bcd \u0b95\u0bc7\u0b95\u0bcd 1 \u0b95\u0bbf.",
+        "quantity": 2.0,
+        "unit_price": 450.0,
+        "total_price": 900.0
+      }
+    ],
+    "subtotal": 1370.0,
+    "tax": 196.38,
+    "total_amount": 1566.38,
+    "currency": "Rs."
+  }
+]

@@ -1,0 +1,2 @@
+invoice_number,invoice_date,due_date,billing_address,shipping_address,vendor_name,customer_name,subtotal,tax,total_amount,currency,line_item_1_description,line_item_1_quantity,line_item_1_unit_price,line_item_1_total_price,line_item_2_description,line_item_2_quantity,line_item_2_unit_price,line_item_2_total_price,line_item_3_description,line_item_3_quantity,line_item_3_unit_price,line_item_3_total_price
+INV113,03-02-2025,,,,ராகா பேக்கரி & ரெஸ்டாரன்ட்,,1370.0,196.38,1566.38,Rs.,பிளம் கேக் 1 கி.,1.0,350.0,350.0,பிரெளனி,3.0,40.0,120.0,ஸ்பான்ஜ் கேக் 1 கி.,2.0,450.0,900.0
