@@ -1,4 +1,4 @@
-# Smart Invoice Parser 🧾✨
+# Smart Invoice Parser
 
 
 A cutting-edge multilingual invoice parsing application with advanced features like fraud detection, anomaly identification using Isolation Forest, and interactive data visualization.
@@ -7,7 +7,7 @@ A cutting-edge multilingual invoice parsing application with advanced features l
 *No login required • Process sample invoices in seconds ⏱️*
 
 
-## 🌟 Features
+##  Features
 
 - **Multilingual Support**: Parse invoices in English, Spanish, French, German, and more
 - **AI-Powered Extraction**: Utilizes LLaMA-4 for highly accurate data extraction
@@ -21,7 +21,7 @@ A cutting-edge multilingual invoice parsing application with advanced features l
 
 
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python)
 ![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?logo=streamlit)
@@ -58,7 +58,7 @@ A cutting-edge multilingual invoice parsing application with advanced features l
    - `app.py`: Main processing pipeline
    - `enhanced_ui.py`: Interactive dashboard components
 
-## 🚀 How It Works
+##  How It Works
 
 ### 1. Intelligent Invoice Parsing Pipeline
 
@@ -106,7 +106,7 @@ Our multi-layered fraud detection combines:
 - **ML-powered insights**: Isolation Forest anomalies
 - **Pattern recognition**: Vendor-specific behavior analysis
 
-## 🖥️ UI Showcase
+##  UI Showcase
 
 | Feature | Screenshot |
 |---------|------------|
@@ -114,7 +114,7 @@ Our multi-layered fraud detection combines:
 | **Fraud Detection** |![Screenshot 2025-06-03 231430](https://github.com/user-attachments/assets/c9531a28-631a-46b8-9574-ae2e7d02c00f)|
 | **Chat Assistant** |![image](https://github.com/user-attachments/assets/11de9800-101e-4099-bf3c-b81815efbc83)|
 
-## 🛠️ Installation
+##  Installation
 
 1. Clone the repository:
    ```bash
@@ -138,7 +138,7 @@ Our multi-layered fraud detection combines:
    streamlit run app.py
    ```
 
-## 📊 Performance Metrics
+##  Performance Metrics
 
 | Metric | Value |
 |--------|-------|
@@ -148,7 +148,7 @@ Our multi-layered fraud detection combines:
 | Average Processing Time | 3.2s/invoice |
 | Multilingual Support | 8 languages |
 
-## 🤖 Chatbot Examples
+##  Chatbot Examples
 
 **User**: "Which invoice has the highest total?"  
 **Bot**: "Invoice #INV-7892 has the highest total of $12,450.00 dated 2023-11-15 from VendorTech Solutions."
@@ -156,7 +156,7 @@ Our multi-layered fraud detection combines:
 **User**: "Are there any duplicate invoice numbers?"  
 **Bot**: "Yes, invoice number INV-5421 appears 3 times from different vendors. This might indicate fraud."
 
-## 📈 Advanced Analytics
+##  Advanced Analytics
 
 Our system provides powerful insights through:
 
@@ -166,7 +166,7 @@ Our system provides powerful insights through:
 - Cash flow forecasting
 - Budget vs. actual comparisons
 
-## 🌐 Multilingual Support
+##  Multilingual Support
 
 The application seamlessly handles invoices in multiple languages:
 
@@ -175,7 +175,7 @@ The application seamlessly handles invoices in multiple languages:
 | Tamil | ![image](https://github.com/user-attachments/assets/90c73647-7f96-4605-98c1-60cf98fb1a3f)|
 | French | ![image](https://github.com/user-attachments/assets/805aafeb-2d7b-4766-bb5a-c02f20c55db8)|
 
-## 🚨 Fraud Detection Rules
+##  Fraud Detection Rules
 
 1. **Duplicate Invoice Numbers**: Same number across different vendors
 2. **Round Amounts**: Excessive rounding of totals (e.g., $10,000.00)
@@ -183,7 +183,7 @@ The application seamlessly handles invoices in multiple languages:
 4. **Rapid Succession**: Multiple invoices from same vendor in short time
 5. **Amount Discrepancies**: Large differences between subtotal and total
 
-## 📝 Future Enhancements
+##  Future Enhancements
 
 - [ ] Vendor reputation scoring system
 - [ ] Blockchain-based invoice verification
@@ -201,7 +201,7 @@ We welcome contributions! Please follow these steps:
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-## 📜 License
+##  License
 
 Distributed under the MIT License. See `LICENSE` for more information.
 
