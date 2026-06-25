@@ -30,6 +30,7 @@ from telemetry_validator import telemetry_context_validation
 from email_ingestor import ingest_eml
 from vendor_ledger import check_vendor_iban
 from document_hygiene import scan_attachments
+import email_forensics
 
 # ── Constants ──────────────────────────────────────────────────────────────
 
@@ -239,7 +240,20 @@ async def mailbox_check(req: CheckRequest):
         ingested = ingest_eml(eml_path.read_bytes())
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Email parsing failed: {e}")
-    vec = {"risk": ingested.get("vec_risk", "UNKNOWN"), "flags": ingested.get("vec_flags", [])}
+    vec_flags = list(ingested.get("vec_flags", []))
+    # Augment Layer 1 with look-alike domain, homoglyph and zero-width detection.
+    vec_flags += email_forensics.analyze(
+        ingested.get("sender", ""), ingested.get("reply_to", ""), ingested.get("subject", "")
+    )
+    if any(f["severity"] == "HIGH" for f in vec_flags):
+        vec_risk = "HIGH"
+    elif any(f["severity"] == "MEDIUM" for f in vec_flags):
+        vec_risk = "MEDIUM"
+    elif any(f["severity"] == "LOW" for f in vec_flags):
+        vec_risk = "LOW"
+    else:
+        vec_risk = "CLEAN"
+    vec = {"risk": vec_risk, "flags": vec_flags}
 
     # Layer 0 — document hygiene: scan attachments for active/hidden content
     # BEFORE trusting the document. A FAIL means quarantine.

@@ -137,6 +137,29 @@ def test_hygiene_scanner_unit():
     assert scan_attachment("m.docm", "application/octet-stream", buf.getvalue())["status"] == "FAIL"
 
 
+# ── Email forensics: look-alike domains, homoglyphs, zero-width chars ────────
+
+def test_vec_email_flagged_as_lookalike_domain():
+    data = client.post("/mailbox/check", json={"id": "vec"}).json()
+    codes = {f["code"] for f in data["vec"]["flags"]}
+    assert "LOOKALIKE_DOMAIN" in codes        # atlantlc-shipping.com vs atlantic-shipping.com
+
+def test_email_forensics_unit():
+    from email_forensics import analyze
+    # typosquat of a known vendor domain
+    codes = {f["code"] for f in analyze('"Atlantic" <pay@atlantlc-shipping.com>')}
+    assert "LOOKALIKE_DOMAIN" in codes
+    # legitimate domain -> no look-alike flag
+    assert not any(f["code"] == "LOOKALIKE_DOMAIN"
+                   for f in analyze("billing@atlantic-shipping.com"))
+    # zero-width character in the subject
+    zw = analyze("billing@atlantic-shipping.com", subject="UR​GENT payment")
+    assert any(f["code"] == "ZERO_WIDTH_CHARS" for f in zw)
+    # Cyrillic homoglyph in the subject ('а' is U+0430, not Latin 'a')
+    hg = analyze("billing@atlantic-shipping.com", subject="pаyment due")
+    assert any(f["code"] == "HOMOGLYPH_TEXT" for f in hg)
+
+
 # ── Layer 3: vendor bank-account change-detection (hashed ledger) ────────────
 
 def test_vec_email_flags_new_bank_account():
