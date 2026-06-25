@@ -7,6 +7,7 @@ from utils import InvoiceData, GroqClient, preprocess_image, process_image_uploa
 from uuid import uuid4
 import argparse
 from telemetry_validator import telemetry_context_validation
+from bol_scanner_app import BOL_EXTRACTION_PROMPT, _extract_bol, _map_cargo_type
 from email_ingestor import ingest_eml, make_demo_eml, imap_fetch_invoices, make_demo_imap_results
 
 # Invoice type detection
@@ -289,7 +290,7 @@ def enhanced_ui():
     st.session_state.groq_api_key = groq_api_key
 
     # Tabs
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📄 Invoice Extraction", "🤖 Chatbot", "🚨 Fraud Detection", "🛰️ Telemetry Validation", "📧 Email Ingestion"])
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📄 Invoice Extraction", "🤖 Chatbot", "🚨 Fraud Detection", "🛰️ Telemetry Validation", "📧 Email Ingestion", "🚢 BOL Scanner"])
 
     with tab1:
         st.header("Invoice Extraction")
@@ -901,6 +902,132 @@ def enhanced_ui():
         if eml_bytes:
             result = ingest_eml(eml_bytes)
             _show_eml_result(result)
+
+    # --- Tab 6: BOL Scanner ---
+    with tab6:
+        st.header("Bill of Lading Scanner")
+        st.markdown(
+            "> Upload a Bill of Lading image to extract all logistics identifiers "
+            "and instantly verify the physical event against live AIS vessel data."
+        )
+
+        uploaded_bol = st.file_uploader(
+            "Upload Bill of Lading (JPEG / PNG / WebP)",
+            type=["jpg", "jpeg", "png", "webp"],
+            key="bol_uploader",
+        )
+
+        if uploaded_bol:
+            image_bytes = uploaded_bol.read()
+            col_img, col_results = st.columns([1, 1], gap="medium")
+
+            with col_img:
+                st.image(image_bytes, caption=uploaded_bol.name, use_container_width=True)
+
+            with col_results:
+                if st.button("Scan & Validate BOL", type="primary", key="bol_scan_btn"):
+                    # Step 1 — extract
+                    with st.spinner("Extracting fields via LLaMA-4 Scout…"):
+                        try:
+                            bol = _extract_bol(image_bytes, st.session_state.groq_api_key)
+                            st.session_state["bol_fields"] = bol
+                        except Exception as e:
+                            st.error(f"Extraction failed: {e}")
+                            st.session_state.pop("bol_fields", None)
+                            st.session_state.pop("bol_telemetry", None)
+
+                    # Step 2 — telemetry (only if extraction succeeded)
+                    if st.session_state.get("bol_fields"):
+                        mt_key = None
+                        try:
+                            mt_key = st.secrets.get("MARINETRAFFIC_API_KEY")
+                        except Exception:
+                            pass
+                        if not mt_key:
+                            mt_key = os.getenv("MARINETRAFFIC_API_KEY")
+
+                        ais_key = None
+                        if not mt_key:
+                            try:
+                                ais_key = st.secrets.get("AISSTREAM_API_KEY")
+                            except Exception:
+                                pass
+                            if not ais_key:
+                                ais_key = os.getenv("AISSTREAM_API_KEY")
+
+                        bol = st.session_state["bol_fields"]
+                        cargo_raw = bol.get("cargo_description") or ""
+                        payload = {
+                            "mmsi": bol.get("mmsi") or "",
+                            "imo": bol.get("imo") or "",
+                            "discharge_port": bol.get("port_of_discharge") or "",
+                            "invoice_date": bol.get("bol_date") or "",
+                            "cargo_type": _map_cargo_type(cargo_raw),
+                            "voyage_id": bol.get("voyage_number") or "",
+                            "cargo_quantity_mt": bol.get("cargo_quantity_mt"),
+                        }
+                        with st.spinner("Checking vessel against AIS data…"):
+                            st.session_state["bol_telemetry"] = telemetry_context_validation(
+                                payload,
+                                marinetraffic_api_key=mt_key,
+                                aisstream_api_key=ais_key,
+                            )
+
+            # ── Results ──────────────────────────────────────────────────────
+            if st.session_state.get("bol_fields"):
+                bol = st.session_state["bol_fields"]
+
+                st.divider()
+                st.subheader("Extracted BOL Fields")
+
+                fields = [
+                    ("BOL Number",        bol.get("bol_number")),
+                    ("Vessel",            bol.get("vessel_name")),
+                    ("MMSI",              bol.get("mmsi")),
+                    ("IMO",               bol.get("imo")),
+                    ("Voyage",            bol.get("voyage_number")),
+                    ("Port of Loading",   bol.get("port_of_loading")),
+                    ("Port of Discharge", bol.get("port_of_discharge")),
+                    ("BOL Date",          bol.get("bol_date")),
+                    ("Cargo",             bol.get("cargo_description")),
+                    ("Quantity (MT)",     bol.get("cargo_quantity_mt")),
+                    ("Shipper",           bol.get("shipper")),
+                    ("Consignee",         bol.get("consignee")),
+                ]
+                col_a, col_b = st.columns(2)
+                for i, (label, value) in enumerate(fields):
+                    with (col_a if i % 2 == 0 else col_b):
+                        st.markdown(f"**{label}:** {value or '—'}")
+
+            if st.session_state.get("bol_telemetry"):
+                tel = st.session_state["bol_telemetry"]
+                verdict = tel.get("verdict", "BLOCKED" if tel["is_tampered"] else "CLEAR")
+
+                st.divider()
+                st.subheader("Telemetry Verdict")
+
+                if verdict == "BLOCKED":
+                    st.error("🚨 BLOCKED — Fraud indicator detected")
+                elif verdict == "REVIEW":
+                    st.warning("⚠️ REVIEW — Could not fully verify against AIS data")
+                else:
+                    st.success("✅ CLEAR — Physical event confirmed")
+
+                st.markdown(f"**Risk score:** `{tel['risk_score']}`")
+                st.markdown(f"**Reason:** {tel['overall_reason']}")
+
+                if tel.get("vessel_name"):
+                    st.markdown(
+                        f"**Vessel:** {tel['vessel_name']} &nbsp;|&nbsp; "
+                        f"**Carrier:** {tel.get('carrier', '—')} &nbsp;|&nbsp; "
+                        f"**Source:** `{tel.get('source', '—')}`",
+                        unsafe_allow_html=True,
+                    )
+
+                st.subheader("Check Breakdown")
+                for check in tel.get("checks", []):
+                    icon = "✅" if check["status"] == "PASS" else ("⚠️" if check["status"] == "WARN" else "❌")
+                    st.markdown(f"{icon} **`{check['field']}`** — {check['detail']}")
 
     # Batch processing status
     display_batch_status(st.session_state.invoices)
