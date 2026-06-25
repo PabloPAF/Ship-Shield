@@ -158,6 +158,27 @@ def test_clean_vendors_pass_entity():
         assert e and e["status"] == "PASS"
 
 
+# ── Layer 3 addendum: IBAN/bank enrichment + Verification of Payee ──────────
+
+def test_vop_mismatch_on_hijacked_account():
+    data = client.post("/mailbox/check", json={"id": "vec"}).json()
+    assert data["bank_vop"]["status"] == "FAIL"   # account holder != vendor
+    assert data["verdict"] == "BLOCKED"
+
+def test_vop_pass_on_clean_invoices():
+    for eid in ("clean1", "clean2"):
+        assert client.post("/mailbox/check", json={"id": eid}).json()["bank_vop"]["status"] == "PASS"
+
+def test_bol_has_no_vop():
+    assert client.post("/mailbox/check", json={"id": "bol_clean"}).json()["bank_vop"] is None
+
+def test_account_registry_stores_no_raw_ibans():
+    import pathlib
+    raw = pathlib.Path("account_registry.json").read_text()
+    for iban in ("NL91ABNA0417164300", "DE89370400440532013000", "GB29NWBK60161331926819"):
+        assert iban not in raw
+
+
 # ── Layer 0: document hygiene (active/hidden content in attachments) ─────────
 
 def test_active_content_pdf_is_quarantined():

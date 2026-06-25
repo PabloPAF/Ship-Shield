@@ -33,6 +33,7 @@ from document_hygiene import scan_attachments
 from sanctions_screen import screen_counterparty
 from vessel_risk import assess_vessel
 from entity_verify import verify_entity
+from bank_enrich import enrich_bank
 import email_forensics
 
 # ── Constants ──────────────────────────────────────────────────────────────
@@ -277,6 +278,13 @@ async def mailbox_check(req: CheckRequest):
     # Returns None for documents without an IBAN (e.g. a Bill of Lading).
     bank = check_vendor_iban(entry.get("invoice", {}).get("vendor", ""),
                              entry["payload"].get("iban", ""))
+    # Layer 3 (addendum) — IBAN/bank enrichment + Verification of Payee.
+    bank_vop = enrich_bank(
+        entry.get("invoice", {}).get("vendor", ""),
+        entry["payload"].get("iban", ""),
+        vendor_country="",  # could be sourced from the entity record
+        vop_api_key=_read_secret("VOP_API_KEY"),
+    )
 
     # Layer 4 — counterparty screening (sanctions / dark fleet).
     iban_country = entry["payload"].get("iban", "")[:2].upper()
@@ -318,11 +326,13 @@ async def mailbox_check(req: CheckRequest):
     elif vec["risk"] in ("MEDIUM", "LOW") and verdict == "CLEAR":
         verdict = "REVIEW"
         risk = max(risk, 0.3)
-    if bank:
-        if bank["status"] == "FAIL":
+    for b in (bank, bank_vop):
+        if not b:
+            continue
+        if b["status"] == "FAIL":
             verdict = "BLOCKED"
-            risk = max(risk, float(bank.get("risk", 1.0)))
-        elif bank["status"] == "WARN" and verdict == "CLEAR":
+            risk = max(risk, float(b.get("risk", 1.0)))
+        elif b["status"] == "WARN" and verdict == "CLEAR":
             verdict = "REVIEW"
             risk = max(risk, 0.3)
     if hygiene:
@@ -349,6 +359,7 @@ async def mailbox_check(req: CheckRequest):
         "verdict": verdict,
         "hygiene": hygiene,
         "bank": bank,
+        "bank_vop": bank_vop,
         "vessel_risk": vessel_risk,
         "counterparty": counterparty,
         "risk_score": round(risk, 2),

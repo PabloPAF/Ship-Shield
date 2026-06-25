@@ -1,0 +1,33 @@
+{
+  "_note": "Mock Verification-of-Payee directory. Hash-keyed (HMAC); no raw IBANs.",
+  "accounts": {
+    "7e6bc076f9780395a66893723b9b9274f6101ab6bebd2dc2d4699940ee8b3476": {
+      "holder": "Atlantic Shipping BV",
+      "country": "NL"
+    },
+    "ac86c628f2242ac3b80c1ad287da8b2c09daa182d355a729c88addc0291e54f2": {
+      "holder": "Nordic Freight GmbH",
+      "country": "DE"
+    },
+    "653ea642f63210b05fef918c2a421a618f0059a71f6d589b35f021048d17ab0b": {
+      "holder": "Iberian Cargo SL",
+      "country": "ES"
+    },
+    "bb6cf592bad552f9072c49e0c45c404684f29fff942403003ee9c642dd505149": {
+      "holder": "Volga Maritime OOO",
+      "country": "NL"
+    },
+    "46ecbdf45aa5029f29e31912af529c45976afdf31fe45b100aaff0c299f07571": {
+      "holder": "Old Salt Shipping Ltd",
+      "country": "DE"
+    },
+    "7219a0485c67ffef7122d4e8f9cfe0d4d59ec9a7340abd5e3a0f28d524babb1e": {
+      "holder": "Ghostline Logistics Ltd",
+      "country": "NL"
+    },
+    "5ea4be7b2a2425d3d59e5204b55a77595d59b7bdb2099e9c21cc977dd61bb58e": {
+      "holder": "QuickPay Solutions Ltd",
+      "country": "GB"
+    }
+  }
+}
