@@ -57,8 +57,10 @@
   .rbody{padding:18px 24px; overflow:auto; flex:1; line-height:1.55;}
   .rbody p{margin-bottom:10px;}
   .checkbtnrow{padding:10px 24px; border-bottom:1px solid var(--ms-line); display:flex; gap:10px; align-items:center; background:#fbfbfa;}
-  .ssbtn{background:var(--ms-blue); color:#fff; border:none; border-radius:4px; padding:9px 16px; font-size:13px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px; font-family:inherit;}
+  .ssbtn{background:var(--ms-blue); color:#fff; border:none; border-radius:4px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px; font-family:inherit;}
   .ssbtn:hover{background:var(--ms-blue-dark);} .ssbtn:disabled{opacity:.6; cursor:default;}
+  .ssbtn .blogo{height:22px; width:22px; object-fit:contain; background:#fff; border-radius:5px; padding:1px;}
+  .phead .plogo{height:30px; width:30px; object-fit:contain;}
   .btnhint{color:var(--ms-grey); font-size:12px;}
   .attach{border:1px solid var(--ms-line); border-radius:6px; margin:8px 0 16px; max-width:560px; overflow:hidden;}
   .attach .ahead{display:flex; align-items:center; gap:10px; padding:10px 12px; background:#faf9f8; border-bottom:1px solid var(--ms-line);}
@@ -130,8 +132,8 @@
   </div>
   <div class="overlay" id="overlay" onclick="closePanel()"></div>
   <div class="panel" id="panel">
-    <div class="phead"><span style="font-size:20px;">🛡</span>
-      <div><span class="logo">ShipShield</span><span class="sub">Physical Reality Cross-Check</span></div>
+    <div class="phead"><img class="plogo" src="/logo/shipshield_emblem.png" alt="Ship-Shield">
+      <div><span class="logo">Ship-Shield</span><span class="sub">Physical Reality Cross-Check</span></div>
       <button class="closex" onclick="closePanel()">✕</button>
     </div>
     <div class="pbody" id="pbody"></div>
@@ -185,7 +187,7 @@ function openEmail(id){
     <div class="senderrow"><div class="av" style="background:${e.color}">${initials(e.from)}</div>
     <div><div class="sname">${senderName(e.from)}</div><div class="saddr">&lt;${addrOnly(e.from)}&gt;</div></div>
     <div class="meta">${e.date}<div class="torow">To: ${e.to}</div>${replyRow}</div></div></div>
-    <div class="checkbtnrow"><button class="ssbtn" id="ssbtn" onclick="runCheck('${e.id}')"><span class="ico">🛡</span> Cross-check facts</button>
+    <div class="checkbtnrow"><button class="ssbtn" id="ssbtn" onclick="runCheck('${e.id}')"><img class="blogo" src="/logo/shipshield_emblem.png" alt="Ship-Shield"> Ship-Shield</button>
     <span class="btnhint">Verify this invoice against live vessel telemetry &amp; sender headers</span></div>
     <div class="rbody">${bodyHtml}${invoiceHTML(e.invoice)}</div>`;
 }
@@ -197,7 +199,7 @@ async function runCheck(id){
     const data=await r.json();
     showPanel(EMAILS.find(x=>x.id===id), data);
   }catch(err){ alert("Cross-check failed: "+err); }
-  btn.disabled=false; btn.innerHTML=`<span class="ico">🛡</span> Cross-check facts`;
+  btn.disabled=false; btn.innerHTML=`<img class="blogo" src="/logo/shipshield_emblem.png" alt="Ship-Shield"> Ship-Shield`;
 }
 function showPanel(e,d){
   const verdict=d.verdict, tel=d.telemetry, vec=d.vec;

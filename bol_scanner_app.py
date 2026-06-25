@@ -21,6 +21,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from groq import Groq
 from PIL import Image, ImageEnhance
@@ -33,6 +34,7 @@ from email_ingestor import ingest_eml
 TEMPLATE = Path(__file__).parent / "templates" / "bol_index.html"
 MAILBOX_TEMPLATE = Path(__file__).parent / "templates" / "mailbox.html"
 INBOX_DIR = Path(__file__).parent / "mailbox_inbox"
+LOGO_DIR = Path(__file__).parent / "logo"
 SECRETS_PATH = Path(__file__).parent / ".streamlit" / "secrets.toml"
 
 SUPPORTED_MIME = {"image/jpeg", "image/jpg", "image/png", "image/webp", "image/tiff"}
@@ -121,7 +123,10 @@ def _extract_bol(image_bytes: bytes, api_key: str) -> dict:
 
 # ── App ────────────────────────────────────────────────────────────────────
 
-app = FastAPI(title="BOL Authenticity Scanner")
+app = FastAPI(title="ShipShield — BOL Scanner & AP Mailbox")
+
+# Serve the Ship-Shield logo assets (used by the mailbox button + panel header).
+app.mount("/logo", StaticFiles(directory=LOGO_DIR), name="logo")
 
 
 @app.get("/", response_class=HTMLResponse)
