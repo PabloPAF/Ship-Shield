@@ -126,11 +126,14 @@ async def index():
 async def health():
     groq_key = _read_secret("GROQ_API_KEY")
     mt_key = _read_secret("MARINETRAFFIC_API_KEY")
+    ais_key = _read_secret("AISSTREAM_API_KEY")
+    mode = "marinetraffic" if mt_key else ("aisstream" if ais_key else "mock")
     return {
         "status": "ok",
         "groq_configured": bool(groq_key),
         "marinetraffic_configured": bool(mt_key),
-        "mode": "live" if mt_key else "mock",
+        "aisstream_configured": bool(ais_key),
+        "mode": mode,
     }
 
 
@@ -157,6 +160,7 @@ async def scan_bol(file: UploadFile = File(...)):
 
     # Step 2 — telemetry validation
     mt_key = _read_secret("MARINETRAFFIC_API_KEY")
+    ais_key = _read_secret("AISSTREAM_API_KEY")
     cargo_raw = bol.get("cargo_description") or ""
     payload = {
         "mmsi": bol.get("mmsi") or "",
@@ -168,7 +172,11 @@ async def scan_bol(file: UploadFile = File(...)):
         "cargo_quantity_mt": bol.get("cargo_quantity_mt"),
     }
 
-    telemetry = telemetry_context_validation(payload, marinetraffic_api_key=mt_key)
+    telemetry = telemetry_context_validation(
+        payload,
+        marinetraffic_api_key=mt_key,
+        aisstream_api_key=ais_key,
+    )
 
     return JSONResponse({
         "bol": bol,

@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 import requests
@@ -5,6 +6,83 @@ from datetime import datetime, timedelta
 
 REGISTRY_PATH = os.path.join(os.path.dirname(__file__), "maritime_registry.json")
 MT_BASE = "https://services.marinetraffic.com/api"
+
+_AIS_WS_URL = "wss://stream.aisstream.io/v0/stream"
+
+# Port bounding boxes [[SW_lat, SW_lon], [NE_lat, NE_lon]] for AISStream subscriptions.
+_AIS_PORTS = {
+    "Port of Rotterdam":   [[51.85,  3.95],   [52.05,  4.55]],
+    "Port of Antwerp":     [[51.20,  4.20],   [51.40,  4.45]],
+    "Port of Hamburg":     [[53.45,  9.80],   [53.60, 10.10]],
+    "Port of Singapore":   [[ 1.18, 103.60],  [ 1.32, 104.05]],
+    "Port of Los Angeles": [[33.68, -118.30], [33.78, -118.20]],
+    "Port of Barcelona":   [[41.30,  2.10],   [41.40,  2.25]],
+}
+
+
+async def _ais_stream_check_async(mmsi: str, port: str, window_seconds: int, api_key: str) -> dict:
+    """Subscribe to AISStream and return whether `mmsi` broadcasts inside the port bbox."""
+    try:
+        import websockets
+    except ImportError:
+        return {"found": None, "fallback": True, "error": "websockets not installed — run: pip install websockets"}
+
+    bbox = _AIS_PORTS.get(port)
+    if bbox is None:
+        return {"found": None, "fallback": True, "error": f"Port '{port}' not in AIS bounding-box reference"}
+
+    subscribe_msg = {
+        "APIKey": api_key,
+        "BoundingBoxes": [bbox],
+        "FiltersShipMMSI": [str(mmsi)],
+        "FilterMessageTypes": ["PositionReport"],
+    }
+    try:
+        async with websockets.connect(_AIS_WS_URL) as ws:
+            await ws.send(json.dumps(subscribe_msg))
+            loop = asyncio.get_running_loop()
+            deadline = loop.time() + window_seconds
+            while True:
+                remaining = deadline - loop.time()
+                if remaining <= 0:
+                    break
+                try:
+                    raw = await asyncio.wait_for(ws.recv(), timeout=remaining)
+                except asyncio.TimeoutError:
+                    break
+                msg = json.loads(raw)
+                if msg.get("MessageType") != "PositionReport":
+                    continue
+                meta = msg.get("MetaData", {})
+                report = msg["Message"]["PositionReport"]
+                seen_mmsi = str(meta.get("MMSI", report.get("UserID", "")))
+                if seen_mmsi != str(mmsi):
+                    continue
+                return {
+                    "found": True, "fallback": False, "error": None,
+                    "ship_name": meta.get("ShipName", "Unknown").strip(),
+                    "latitude": report.get("Latitude"),
+                    "longitude": report.get("Longitude"),
+                    "speed_knots": report.get("Sog"),
+                }
+    except Exception as e:
+        return {"found": None, "fallback": True, "error": str(e)}
+    return {"found": False, "fallback": False, "error": None}
+
+
+def _run_ais_stream_check(mmsi: str, port: str, window_seconds: int, api_key: str) -> dict:
+    """Sync wrapper — runs the AISStream async check in a dedicated event loop."""
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            return loop.run_until_complete(
+                _ais_stream_check_async(mmsi, port, window_seconds, api_key)
+            )
+        finally:
+            loop.close()
+    except Exception as e:
+        return {"found": None, "fallback": True, "error": str(e)}
 
 
 def _load_registry() -> dict:
@@ -64,6 +142,8 @@ def _live_port_check(mmsi: str, claimed_port: str, invoice_date: str, api_key: s
 def telemetry_context_validation(
     extracted_invoice_json: dict,
     marinetraffic_api_key: str = None,
+    aisstream_api_key: str = None,
+    ais_window_seconds: int = 30,
 ) -> dict:
     """
     Validate invoice logistics identifiers against AIS data.
@@ -117,8 +197,10 @@ def telemetry_context_validation(
             "source": "none",
         }
 
-    use_live = bool(marinetraffic_api_key)
-    source = "marinetraffic_api" if use_live else "mock_registry"
+    use_mt = bool(marinetraffic_api_key)
+    use_ais = bool(aisstream_api_key) and not use_mt
+    use_live = use_mt or use_ais
+    source = "marinetraffic_api" if use_mt else ("aisstream_live" if use_ais else "mock_registry")
     identifier = mmsi or imo
 
     registry = _load_registry()
@@ -148,36 +230,39 @@ def telemetry_context_validation(
     dock_date = registry_entry.get("dock_date")
 
     # --- Port of discharge ---
-    if claimed_port:
-        if use_live:
-            result = _live_port_check(identifier, claimed_port, invoice_date, marinetraffic_api_key)
+    def _registry_port_fallback(claimed, registry_entry, api_label):
+        """Shared fallback: check claimed port against local registry when a live API is unavailable."""
+        nonlocal is_tampered, risk_score, needs_review
+        if registry_entry:
+            registry_port = registry_entry.get("last_docked_port", "")
+            if _normalize_port(claimed) == _normalize_port(registry_port):
+                checks.append({
+                    "field": "discharge_port",
+                    "status": "WARN",
+                    "detail": f"Port '{claimed}' matches local registry ({api_label} unavailable — using fallback).",
+                })
+                needs_review = True
+            else:
+                checks.append({
+                    "field": "discharge_port",
+                    "status": "FAIL",
+                    "detail": f"Invoice claims '{claimed}'. Registry shows: '{registry_port}'. ({api_label} unavailable — verified via fallback)",
+                })
+                is_tampered = True
+                risk_score = max(risk_score, 0.95)
+        else:
+            checks.append({
+                "field": "discharge_port",
+                "status": "WARN",
+                "detail": f"{api_label} unavailable and vessel not in local registry. Manual review required.",
+            })
+            needs_review = True
 
+    if claimed_port:
+        if use_mt:
+            result = _live_port_check(identifier, claimed_port, invoice_date, marinetraffic_api_key)
             if result["fallback"]:
-                # API unavailable — fall back to local registry silently
-                if registry_entry:
-                    registry_port = registry_entry.get("last_docked_port", "")
-                    if _normalize_port(claimed_port) == _normalize_port(registry_port):
-                        checks.append({
-                            "field": "discharge_port",
-                            "status": "WARN",
-                            "detail": f"Port '{claimed_port}' matches local registry (MarineTraffic API unavailable — using fallback).",
-                        })
-                        needs_review = True
-                    else:
-                        checks.append({
-                            "field": "discharge_port",
-                            "status": "FAIL",
-                            "detail": f"Invoice claims '{claimed_port}'. Registry shows: '{registry_port}'. (API unavailable — verified via fallback)",
-                        })
-                        is_tampered = True
-                        risk_score = max(risk_score, 0.95)
-                else:
-                    checks.append({
-                        "field": "discharge_port",
-                        "status": "WARN",
-                        "detail": "MarineTraffic API unavailable and vessel not in local registry. Manual review required.",
-                    })
-                    needs_review = True
+                _registry_port_fallback(claimed_port, registry_entry, "MarineTraffic API")
             elif result["found"]:
                 checks.append({
                     "field": "discharge_port",
@@ -193,6 +278,33 @@ def telemetry_context_validation(
                 })
                 is_tampered = True
                 risk_score = max(risk_score, 0.95)
+
+        elif use_ais:
+            result = _run_ais_stream_check(identifier, claimed_port, ais_window_seconds, aisstream_api_key)
+            if result["fallback"]:
+                _registry_port_fallback(claimed_port, registry_entry, f"AISStream ({result.get('error', 'unavailable')})")
+            elif result["found"]:
+                loc = ""
+                if result.get("latitude") is not None:
+                    loc = f" at ({result['latitude']:.4f}, {result['longitude']:.4f}), speed {result.get('speed_knots')} kn"
+                checks.append({
+                    "field": "discharge_port",
+                    "status": "PASS",
+                    "detail": f"Vessel {result.get('ship_name', identifier)} confirmed live in '{claimed_port}' via AISStream{loc}.",
+                })
+            else:
+                checks.append({
+                    "field": "discharge_port",
+                    "status": "FAIL",
+                    "detail": (
+                        f"Vessel MMSI {identifier} did NOT appear in '{claimed_port}' within "
+                        f"{ais_window_seconds}s of live AIS. Claimed discharge port unverified "
+                        f"— HIGH FRAUD RISK (possible VEC port swap)."
+                    ),
+                })
+                is_tampered = True
+                risk_score = max(risk_score, 0.95)
+
         else:
             registry_port = registry_entry.get("last_docked_port", "")
             if _normalize_port(claimed_port) != _normalize_port(registry_port):
@@ -211,9 +323,9 @@ def telemetry_context_validation(
                 })
 
     # --- Case A: invoice date vs AIS dock date ---
-    # Live mode enforces this implicitly via the portcalls date window.
-    # Mock mode checks explicitly since the registry has a single dock_date entry.
-    if not use_live and invoice_date and dock_date:
+    # MarineTraffic enforces this implicitly via the portcalls date window.
+    # AISStream and mock mode check explicitly against the registry dock_date.
+    if not use_mt and invoice_date and dock_date:
         diff = _date_diff_days(invoice_date, dock_date)
         if diff is not None:
             if diff > 2:

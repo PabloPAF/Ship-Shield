@@ -2,6 +2,7 @@ groq
 streamlit
 python-dotenv
 requests
+websockets
 pillow
 fastapi
 uvicorn[standard]

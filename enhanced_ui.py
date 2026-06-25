@@ -7,7 +7,7 @@ from utils import InvoiceData, GroqClient, preprocess_image, process_image_uploa
 from uuid import uuid4
 import argparse
 from telemetry_validator import telemetry_context_validation
-from email_ingestor import ingest_eml, make_demo_eml
+from email_ingestor import ingest_eml, make_demo_eml, imap_fetch_invoices, make_demo_imap_results
 
 # Invoice type detection
 def detect_invoice_type(invoice_data: dict) -> str:
@@ -78,6 +78,99 @@ def select_input_method():
         ["Upload Image 📤", "Image URL 🌐"],
         key="enhanced_input_method"
     )
+
+
+def _show_eml_result(result: dict, uid_prefix: str = ""):
+    """Render VEC analysis and attachments for one parsed email result dict."""
+    if result.get("error"):
+        st.error(f"Failed to parse email: {result['error']}")
+        return
+
+    st.subheader("Email Headers")
+    meta_cols = st.columns(2)
+    with meta_cols[0]:
+        st.markdown(f"**From:** {result['sender'] or '—'}")
+        st.markdown(f"**Subject:** {result['subject'] or '—'}")
+    with meta_cols[1]:
+        st.markdown(f"**Date:** {result['date'] or '—'}")
+        reply_to_val = result["reply_to"]
+        if reply_to_val:
+            st.markdown(f"**Reply-To:** ⚠️ `{reply_to_val}`")
+        else:
+            st.markdown("**Reply-To:** *(not set)*")
+
+    st.divider()
+
+    vec_risk = result["vec_risk"]
+    flags = result["vec_flags"]
+
+    if vec_risk == "HIGH":
+        st.error("🚨 HIGH VEC RISK — Strong indicators of Vendor Email Compromise detected")
+    elif vec_risk == "MEDIUM":
+        st.warning("⚠️ MEDIUM VEC RISK — Suspicious header patterns found")
+    elif vec_risk == "LOW":
+        st.warning("⚠️ LOW VEC RISK — Minor indicators; proceed with caution")
+    else:
+        st.success("✅ No VEC indicators detected in email headers")
+
+    if flags:
+        st.subheader("VEC Flag Details")
+        for flag in flags:
+            sev = flag["severity"]
+            icon = "🚨" if sev == "HIGH" else ("⚠️" if sev == "MEDIUM" else "🔶")
+            st.markdown(f"{icon} **[{sev}]** `{flag['code']}` — {flag['detail']}")
+
+    st.divider()
+
+    attachments = result["attachments"]
+    st.subheader(f"Attachments ({len(attachments)} found)")
+
+    if not attachments:
+        st.info("No invoice attachments (PDF or image) found in this email.")
+    else:
+        for idx, att in enumerate(attachments):
+            att_label = f"📎 {att['filename']} ({att['content_type']})"
+            with st.expander(att_label, expanded=(idx == 0)):
+                if att["is_image"]:
+                    st.image(att["bytes"], caption=att["filename"], use_container_width=True)
+                    btn_key = f"extract_att_{uid_prefix}_{idx}"
+                    if st.button(f"Extract Invoice Data from {att['filename']}", key=btn_key):
+                        groq_client = GroqClient(st.session_state.groq_api_key)
+                        with st.spinner("Extracting invoice data via LLaMA…"):
+                            invoice_data = groq_client.extract_invoice_data(
+                                att["bytes"], att["content_type"]
+                            )
+                        if invoice_data:
+                            st.session_state.invoices.append(invoice_data)
+                            st.session_state.invoice_data = invoice_data
+                            st.success(
+                                f"Invoice extracted: {invoice_data.invoice_number}. "
+                                "Pre-filled into Telemetry Validation tab."
+                            )
+                            st.session_state["tel_invoice_date"] = invoice_data.invoice_date or ""
+                            st.rerun()
+                        else:
+                            st.error("Extraction failed — check that the image is a legible invoice.")
+                else:
+                    st.markdown(
+                        f"**{att['filename']}** ({att['content_type']}, "
+                        f"{len(att['bytes']):,} bytes)"
+                    )
+                    st.info(
+                        "PDF extraction requires a PDF-to-image conversion step. "
+                        "Save as PNG/JPEG and upload via the Invoice Extraction tab."
+                    )
+
+    if vec_risk in ("HIGH", "MEDIUM"):
+        st.divider()
+        st.subheader("Recommended Actions")
+        st.markdown(
+            "- **Do not process payment** until the invoice is verified via a known-good contact.\n"
+            "- Call the vendor using a phone number from your existing records — not from this email.\n"
+            "- Forward the email to your security team for header forensics.\n"
+            "- If an IBAN was changed, cross-check it against the **Telemetry Validation** tab."
+        )
+
 
 def enhanced_ui():
     # Setup page
@@ -468,7 +561,7 @@ def enhanced_ui():
         if not telemetry_enabled:
             st.info("Toggle on Telemetry Validation above to begin physical event verification.")
         else:
-            # Resolve MarineTraffic API key — live mode if present, mock mode otherwise
+            # Resolve API keys — MarineTraffic takes priority, then AISStream, then mock
             mt_api_key = None
             try:
                 mt_api_key = st.secrets.get("MARINETRAFFIC_API_KEY")
@@ -477,10 +570,32 @@ def enhanced_ui():
             if not mt_api_key:
                 mt_api_key = os.getenv("MARINETRAFFIC_API_KEY")
 
+            ais_api_key = None
+            if not mt_api_key:
+                try:
+                    ais_api_key = st.secrets.get("AISSTREAM_API_KEY")
+                except Exception:
+                    pass
+                if not ais_api_key:
+                    ais_api_key = os.getenv("AISSTREAM_API_KEY")
+
             if mt_api_key:
-                st.info("Live mode — port of discharge verified via MarineTraffic AIS API.")
+                st.info("Live mode — port of discharge verified via MarineTraffic historical port calls.")
+            elif ais_api_key:
+                st.info(
+                    "Live mode — port of discharge verified via AISStream real-time feed. "
+                    "Best for vessels currently in port; pair with MarineTraffic for historical records."
+                )
             else:
-                st.warning("Mock mode — no MARINETRAFFIC_API_KEY found. Using local registry.")
+                st.warning("Mock mode — no API key found (MARINETRAFFIC_API_KEY or AISSTREAM_API_KEY). Using local registry.")
+
+            ais_window_seconds = 30
+            if ais_api_key and not mt_api_key:
+                ais_window_seconds = st.slider(
+                    "AIS listen window (seconds)",
+                    min_value=10, max_value=120, value=30, step=10,
+                    help="How long to listen on the live AIS feed before marking the vessel as absent.",
+                )
 
             DEMO_SCENARIOS = {
                 "✅ CLEAR — Vessel docked, port matches, IBAN correct": {
@@ -615,7 +730,12 @@ def enhanced_ui():
                     "voyage_id": voyage_id,
                     "cargo_quantity_mt": cargo_quantity_mt if cargo_quantity_mt > 0 else None,
                 }
-                result = telemetry_context_validation(invoice_payload, marinetraffic_api_key=mt_api_key)
+                result = telemetry_context_validation(
+                    invoice_payload,
+                    marinetraffic_api_key=mt_api_key,
+                    aisstream_api_key=ais_api_key,
+                    ais_window_seconds=ais_window_seconds,
+                )
 
                 st.divider()
                 st.subheader("Validation Result")
@@ -663,7 +783,7 @@ def enhanced_ui():
 
         input_mode = st.radio(
             "Input method",
-            ["Upload .eml file", "Demo scenario"],
+            ["Upload .eml file", "Live Mailbox (IMAP)", "Demo scenario"],
             horizontal=True,
             key="email_input_mode",
         )
@@ -674,7 +794,99 @@ def enhanced_ui():
             uploaded_eml = st.file_uploader("Upload invoice email (.eml)", type=["eml"], key="eml_uploader")
             if uploaded_eml:
                 eml_bytes = uploaded_eml.read()
-        else:
+
+        elif input_mode == "Live Mailbox (IMAP)":
+            # ── Demo inbox ───────────────────────────────────────────────────
+            with st.expander("Try demo inbox (no credentials needed)", expanded=False):
+                st.caption(
+                    "Simulates fetching 3 unread invoice emails from an accounts payable inbox: "
+                    "one clean, one suspicious sender, one VEC attack."
+                )
+                col_demo, col_clear = st.columns([1, 1])
+                with col_demo:
+                    if st.button("Load demo inbox", key="imap_demo_load"):
+                        st.session_state["imap_demo_results"] = make_demo_imap_results()
+                with col_clear:
+                    if st.button("Clear", key="imap_demo_clear"):
+                        st.session_state.pop("imap_demo_results", None)
+
+            if st.session_state.get("imap_demo_results"):
+                demo_msgs = st.session_state["imap_demo_results"]
+                risk_labels = {
+                    "HIGH": "🚨 HIGH RISK",
+                    "MEDIUM": "⚠️ MEDIUM RISK",
+                    "LOW": "🔶 LOW RISK",
+                    "CLEAN": "✅ CLEAN",
+                }
+                st.success(f"Demo inbox: {len(demo_msgs)} message(s) fetched.")
+                for i, msg_result in enumerate(demo_msgs):
+                    risk = msg_result.get("vec_risk", "CLEAN")
+                    label = f"{risk_labels.get(risk, risk)} — {msg_result.get('subject') or f'Message {i + 1}'}"
+                    with st.expander(f"📧 {label}", expanded=(i == 0)):
+                        _show_eml_result(msg_result, uid_prefix=msg_result.get("uid", str(i)))
+                st.divider()
+
+            # ── Live connection ───────────────────────────────────────────────
+            IMAP_PRESETS = {
+                "Gmail":             ("imap.gmail.com",        993),
+                "Outlook / Hotmail": ("outlook.office365.com", 993),
+                "Yahoo":             ("imap.mail.yahoo.com",   993),
+                "Custom":            ("",                      993),
+            }
+            preset = st.selectbox("Provider preset", list(IMAP_PRESETS.keys()), key="imap_preset")
+            default_host, default_port = IMAP_PRESETS[preset]
+
+            with st.form("imap_fetch_form"):
+                col_h, col_p = st.columns([3, 1])
+                with col_h:
+                    imap_host = st.text_input("IMAP Host", value=default_host, placeholder="imap.gmail.com")
+                with col_p:
+                    imap_port = st.number_input("Port", value=default_port, min_value=1, max_value=65535)
+                imap_user = st.text_input("Email address", placeholder="you@gmail.com")
+                imap_pass = st.text_input(
+                    "App password",
+                    type="password",
+                    help=(
+                        "Use an app-specific password, not your account password. "
+                        "Gmail: myaccount.google.com/apppasswords. "
+                        "Outlook: account.microsoft.com/security → App passwords."
+                    ),
+                )
+                col_f, col_m = st.columns(2)
+                with col_f:
+                    subject_filter = st.text_input(
+                        "Subject filter", value="invoice",
+                        help="Fetch unread messages whose subject contains this string.",
+                    )
+                with col_m:
+                    max_msgs = st.number_input("Max messages", value=10, min_value=1, max_value=50)
+                mark_read = st.checkbox("Mark fetched messages as read", value=False)
+                fetch_submitted = st.form_submit_button("Fetch from Mailbox", type="primary")
+
+            if fetch_submitted:
+                if not imap_host or not imap_user or not imap_pass:
+                    st.error("Host, email address, and app password are all required.")
+                else:
+                    with st.spinner(f"Connecting to {imap_host}:{int(imap_port)} …"):
+                        messages = imap_fetch_invoices(
+                            host=imap_host,
+                            port=int(imap_port),
+                            username=imap_user,
+                            password=imap_pass,
+                            subject_filter=subject_filter,
+                            max_messages=int(max_msgs),
+                            mark_read=mark_read,
+                        )
+                    if not messages:
+                        st.info(f"No unread messages matching '{subject_filter}' found in INBOX.")
+                    else:
+                        st.success(f"Fetched {len(messages)} message(s).")
+                        for i, msg_result in enumerate(messages):
+                            label = msg_result.get("subject") or f"Message {i + 1}"
+                            with st.expander(f"📧 {label}", expanded=(i == 0)):
+                                _show_eml_result(msg_result, uid_prefix=msg_result.get("uid", str(i)))
+
+        else:  # Demo scenario
             demo_choice = st.selectbox(
                 "Select demo scenario",
                 [
@@ -688,101 +900,7 @@ def enhanced_ui():
 
         if eml_bytes:
             result = ingest_eml(eml_bytes)
-
-            if result.get("error"):
-                st.error(f"Failed to parse email: {result['error']}")
-            else:
-                # ── Email metadata ──────────────────────────────────────────
-                st.subheader("Email Headers")
-                meta_cols = st.columns(2)
-                with meta_cols[0]:
-                    st.markdown(f"**From:** {result['sender'] or '—'}")
-                    st.markdown(f"**Subject:** {result['subject'] or '—'}")
-                with meta_cols[1]:
-                    st.markdown(f"**Date:** {result['date'] or '—'}")
-                    reply_to_val = result["reply_to"]
-                    if reply_to_val:
-                        st.markdown(f"**Reply-To:** ⚠️ `{reply_to_val}`")
-                    else:
-                        st.markdown("**Reply-To:** *(not set)*")
-
-                st.divider()
-
-                # ── VEC risk banner ──────────────────────────────────────────
-                vec_risk = result["vec_risk"]
-                flags = result["vec_flags"]
-
-                if vec_risk == "HIGH":
-                    st.error("🚨 HIGH VEC RISK — Strong indicators of Vendor Email Compromise detected")
-                elif vec_risk == "MEDIUM":
-                    st.warning("⚠️ MEDIUM VEC RISK — Suspicious header patterns found")
-                elif vec_risk == "LOW":
-                    st.warning("⚠️ LOW VEC RISK — Minor indicators; proceed with caution")
-                else:
-                    st.success("✅ No VEC indicators detected in email headers")
-
-                if flags:
-                    st.subheader("VEC Flag Details")
-                    for flag in flags:
-                        sev = flag["severity"]
-                        icon = "🚨" if sev == "HIGH" else ("⚠️" if sev == "MEDIUM" else "🔶")
-                        st.markdown(f"{icon} **[{sev}]** `{flag['code']}` — {flag['detail']}")
-
-                st.divider()
-
-                # ── Attachments ──────────────────────────────────────────────
-                attachments = result["attachments"]
-                st.subheader(f"Attachments ({len(attachments)} found)")
-
-                if not attachments:
-                    st.info("No invoice attachments (PDF or image) found in this email.")
-                else:
-                    for idx, att in enumerate(attachments):
-                        att_label = f"📎 {att['filename']} ({att['content_type']})"
-                        with st.expander(att_label, expanded=(idx == 0)):
-                            if att["is_image"]:
-                                st.image(att["bytes"], caption=att["filename"], use_container_width=True)
-                                if st.button(
-                                    f"Extract Invoice Data from {att['filename']}",
-                                    key=f"extract_att_{idx}",
-                                ):
-                                    groq_client = GroqClient(st.session_state.groq_api_key)
-                                    with st.spinner("Extracting invoice data via LLaMA…"):
-                                        invoice_data = groq_client.extract_invoice_data(
-                                            att["bytes"], att["content_type"]
-                                        )
-                                    if invoice_data:
-                                        st.session_state.invoices.append(invoice_data)
-                                        st.session_state.invoice_data = invoice_data
-                                        st.success(
-                                            f"Invoice extracted: {invoice_data.invoice_number}. "
-                                            "Pre-filled into Telemetry Validation tab."
-                                        )
-                                        # Pre-fill telemetry form
-                                        st.session_state["tel_invoice_date"] = invoice_data.invoice_date or ""
-                                        st.rerun()
-                                    else:
-                                        st.error("Extraction failed — check that the image is a legible invoice.")
-                            else:
-                                st.markdown(
-                                    f"**{att['filename']}** ({att['content_type']}, "
-                                    f"{len(att['bytes']):,} bytes)"
-                                )
-                                st.info(
-                                    "PDF extraction requires a PDF-to-image conversion step. "
-                                    "Save as PNG/JPEG and upload via the Invoice Extraction tab."
-                                )
-
-                # ── Advisory ────────────────────────────────────────────────
-                if vec_risk in ("HIGH", "MEDIUM"):
-                    st.divider()
-                    st.subheader("Recommended Actions")
-                    st.markdown(
-                        "- **Do not process payment** until the invoice is verified via a known-good contact.\n"
-                        "- Call the vendor using a phone number from your existing records — not from this email.\n"
-                        "- Forward the email to your security team for header forensics.\n"
-                        "- If an IBAN was changed, cross-check it against the **Telemetry Validation** tab."
-                    )
+            _show_eml_result(result)
 
     # Batch processing status
     display_batch_status(st.session_state.invoices)

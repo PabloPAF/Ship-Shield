@@ -92,7 +92,7 @@ Two entry points share the same validation core:
   - Cargo keyword → type mapping (grain/coal/crude_oil/lng/ore…)
          ↓
 [Shared validation core — telemetry_context_validation()]
-  - Port check: live MarineTraffic /portcalls API (fallback: mock registry)
+  - Port check: MarineTraffic /portcalls → AISStream WebSocket → mock registry
   - Case A: bol_date vs dock_date (±2 days)
   - Case B: vessel_type vs cargo_type incompatibility
   - Case B: voyage_id duplicate detection
@@ -122,10 +122,12 @@ Two entry points share the same validation core:
 | Anomaly detection | Isolation Forest (scikit-learn) |
 | Data models | Pydantic v2 (`InvoiceData`, `LineItem`) |
 | Email parsing | Python `email` stdlib (RFC 2822 / MIME) |
+| IMAP mailbox | Python `imaplib` stdlib — SSL, unread fetch, mark-read |
 | VEC detection | Custom `email_ingestor.py` |
 | Telemetry validation | Custom `telemetry_validator.py` |
 | AIS data (mock) | `maritime_registry.json` — 3 vessels keyed by MMSI |
-| AIS data (live) | MarineTraffic REST API — `GET /portcalls/{api_key}` |
+| AIS data (real-time) | AISStream WebSocket — `wss://stream.aisstream.io/v0/stream` (free) |
+| AIS data (historical) | MarineTraffic REST API — `GET /portcalls/{api_key}` |
 | Streamlit dashboard | `enhanced_ui.py` — 5-tab app (invoice, chatbot, fraud, telemetry, email) |
 | BOL scanner web app | FastAPI + vanilla HTML/CSS/JS — `bol_scanner_app.py` + `templates/bol_index.html` |
 | Web framework | FastAPI + Uvicorn |
@@ -138,14 +140,17 @@ Two entry points share the same validation core:
 ## 6. Files
 
 ### `email_ingestor.py`
-Parses `.eml` files and flags VEC indicators before document extraction.
+Parses `.eml` files and flags VEC indicators before document extraction. Also fetches directly from live IMAP mailboxes.
 
-- `ingest_eml(bytes) → dict` — main entry point
+- `ingest_eml(bytes) → dict` — parse raw `.eml` bytes; returns headers, VEC flags, attachments
+- `imap_fetch_invoices(host, port, username, password, ...)` — connect over IMAP4_SSL, search unread messages by subject filter, return list of `ingest_eml()` results augmented with `"uid"` key; graceful error dict on auth failure
 - `_check_vec_headers(msg)` — four checks: REPLY_TO_MISMATCH (HIGH), FREE_PROVIDER_SENDER / FREE_PROVIDER_REPLY_TO (MEDIUM), IMPERSONATION (MEDIUM), URGENCY_KEYWORDS (LOW)
 - `_extract_attachments(msg)` — walks MIME tree for PDF/image payloads
 - `make_demo_eml(scenario)` — generates in-memory `.eml` for UI demos ("clean" | "vec_attack")
 
-Return shape:
+IMAP provider presets in UI: Gmail (`imap.gmail.com:993`), Outlook (`outlook.office365.com:993`), Yahoo (`imap.mail.yahoo.com:993`), Custom. Requires app-specific password (not account password).
+
+Return shape (`ingest_eml`):
 ```python
 {
     "sender": str, "subject": str, "reply_to": str, "date": str,
@@ -153,6 +158,7 @@ Return shape:
     "vec_flags": [{"severity": str, "code": str, "detail": str}],
     "attachments": [{"filename": str, "content_type": str, "bytes": bytes, "is_image": bool}],
     "error": str | None,
+    "uid": str | None,   # set by imap_fetch_invoices; None for file-upload path
 }
 ```
 
@@ -178,7 +184,9 @@ Fraud cases detected:
 | API unavailable / no IBAN on file | — | 0.3 — REVIEW |
 | All checks pass | — | 0.0 — CLEAR |
 
-Live mode (API key present): port verified via MarineTraffic `/portcalls`; silently falls back to local registry on timeout/error to avoid false positives.
+Port check priority: **MarineTraffic REST** (paid, historical `portcalls`) → **AISStream WebSocket** (free, real-time) → **local registry** (mock). Both live sources fall back silently to the local registry on network/auth error to avoid false positives. AISStream date check still runs against the registry (no historical data from the stream).
+
+`telemetry_context_validation(payload, marinetraffic_api_key, aisstream_api_key, ais_window_seconds=30)`
 
 Return shape:
 ```python
@@ -191,7 +199,7 @@ Return shape:
     "vessel_name": str | None,
     "carrier": str | None,
     "dock_date": str | None,
-    "source": "mock_registry" | "marinetraffic_api",
+    "source": "mock_registry" | "marinetraffic_api" | "aisstream_live",
 }
 ```
 
@@ -241,7 +249,7 @@ Standalone FastAPI web app for scanning a Bill of Lading image for authenticity.
 
 Routes:
 - `GET /` — serves `bol_index.html`
-- `GET /health` — returns Groq/MarineTraffic key status and AIS mode
+- `GET /health` — returns Groq/MarineTraffic/AISStream key status and AIS mode (`marinetraffic` | `aisstream` | `mock`)
 - `POST /scan` — accepts JPEG/PNG upload, returns `{ bol, telemetry, mode }` JSON
 
 Backend (`bol_scanner_app.py`):
@@ -303,11 +311,17 @@ payload = {
     "voyage_id": "VOY-2026-999",
     "cargo_quantity_mt": 15000,
 }
-result = telemetry_context_validation(payload, marinetraffic_api_key=api_key)
+result = telemetry_context_validation(
+    payload,
+    marinetraffic_api_key=mt_key,    # paid, historical — takes priority
+    aisstream_api_key=ais_key,        # free, real-time — used when no MT key
+    ais_window_seconds=30,            # how long to listen on the live AIS feed
+)
 # result["verdict"] → "CLEAR" | "REVIEW" | "BLOCKED"
 ```
 
-API key resolution order: `st.secrets["MARINETRAFFIC_API_KEY"]` → `os.getenv("MARINETRAFFIC_API_KEY")` → mock mode.
+API key resolution order (both Streamlit app and BOL scanner):
+`st.secrets / os.environ ["MARINETRAFFIC_API_KEY"]` → `["AISSTREAM_API_KEY"]` → mock mode.
 
 ---
 
@@ -319,7 +333,7 @@ API key resolution order: `st.secrets["MARINETRAFFIC_API_KEY"]` → `os.getenv("
 | Manual field entry in Telemetry tab | Auto-extract MMSI, port, voyage ID from invoice via LLaMA prompt |
 | Single registry IBAN | Live IBAN verification via banking API (SWIFT gpi / Open Banking) |
 | Streamlit app | REST API — plugin for Odoo / ERPNext / QuickBooks |
-| `.eml` file upload | IMAP listener on accounts payable inbox — automatic on message arrival |
+| IMAP fetch (manual trigger) | Scheduled background poll — automatic on message arrival |
 
 ---
 
@@ -356,8 +370,10 @@ API key resolution order: `st.secrets["MARINETRAFFIC_API_KEY"]` → `os.getenv("
 | `telemetry_validator.py` — port, Case A–D, IBAN checks; live + mock mode | Done |
 | MarineTraffic API integration — `/portcalls`, timeout fallback | Done |
 | Three-way verdict — CLEAR / REVIEW / BLOCKED | Done |
-| `email_ingestor.py` — VEC header detection, attachment extraction, demo factory | Done |
-| `enhanced_ui.py` — 5-tab dashboard, 10 telemetry demos, email tab | Done |
+| `email_ingestor.py` — VEC header detection, attachment extraction, IMAP fetch, demo factory | Done |
+| AISStream WebSocket integration — real-time vessel position, `ais_window_seconds` slider | Done |
+| IMAP mailbox integration — Gmail/Outlook/Yahoo presets, app-password auth, mark-read | Done |
+| `enhanced_ui.py` — 5-tab dashboard, 10 telemetry demos, email tab with 3 input modes | Done |
 | `bol_scanner_app.py` — FastAPI BOL scanner, LLaMA extraction, cargo mapping | Done |
 | `templates/bol_index.html` — dark-theme drag-drop web UI, live results | Done |
 | All modules — syntax valid, cross-module integration tests passing | Done |

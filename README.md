@@ -41,8 +41,9 @@ After extraction, the invoice's logistics claims are verified against AIS vessel
 - **LLaMA-4 Scout extraction** — vision-capable LLM via Groq API; multilingual (8+ languages); BOL-specific prompt extracts vessel, ports, cargo, tonnage
 - **Isolation Forest anomaly detection** — unsupervised ML on invoice amount patterns
 - **Skuld Cases A–D** — four maritime fraud patterns from P&I Club case files
-- **VEC email detection** — `.eml` parser with header forensics and attachment extraction
-- **MarineTraffic AIS integration** — live port call verification; graceful fallback to mock registry
+- **VEC email detection** — `.eml` upload, IMAP live-mailbox fetch, or demo scenario — header forensics and attachment extraction
+- **AISStream live telemetry** — real-time vessel position check via WebSocket (free tier); falls back to mock registry
+- **MarineTraffic AIS integration** — historical port call verification; graceful fallback to mock registry
 - **Three-way verdict** — CLEAR / REVIEW (API unavailable) / BLOCKED with per-field breakdown and risk score
 - **10 built-in demo scenarios** in the Telemetry tab covering every fraud case
 - **Batch invoice processing** — multi-upload with per-image progress tracking
@@ -61,8 +62,10 @@ After extraction, the invoice's logistics claims are verified against AIS vessel
 | Anomaly detection | Isolation Forest (scikit-learn) |
 | Data validation | Pydantic v2 |
 | Email parsing | Python `email` stdlib (RFC 2822 / MIME) |
+| IMAP mailbox | Python `imaplib` stdlib (SSL, unread fetch, mark-read) |
 | HTTP client | `requests` |
-| Live AIS data | MarineTraffic REST API — `GET /portcalls/{api_key}` |
+| Live AIS data (real-time) | AISStream WebSocket — `wss://stream.aisstream.io/v0/stream` (free) |
+| Live AIS data (historical) | MarineTraffic REST API — `GET /portcalls/{api_key}` |
 | Mock AIS data | `maritime_registry.json` (3 vessels, MMSI-keyed) |
 | Language | Python 3.10+ |
 | Configuration | `.streamlit/secrets.toml` |
@@ -79,7 +82,7 @@ After extraction, the invoice's logistics claims are verified against AIS vessel
 
 ### 1. Email Ingestion (Tab 5)
 
-Upload a `.eml` file or select a demo scenario. The system parses the email headers without opening any attachment:
+Upload a `.eml` file, connect directly to a live mailbox via IMAP, or select a demo scenario. The system parses email headers without opening any attachment:
 
 ```
 From: "Atlantic Shipping BV" <billing@atlantlc-shipping.com>
@@ -131,7 +134,11 @@ payload = {
     "voyage_id": "VOY-2026-999",
     "cargo_quantity_mt": 15000,
 }
-result = telemetry_context_validation(payload, marinetraffic_api_key=api_key)
+result = telemetry_context_validation(
+    payload,
+    marinetraffic_api_key=mt_key,   # paid, historical — priority source
+    aisstream_api_key=ais_key,       # free, real-time — used when no MT key
+)
 ```
 
 Result:
@@ -146,7 +153,11 @@ Checks:
   ❌ iban — IBAN mismatch. Registered: NL91ABNA0417164300
 ```
 
-**API mode:** with a MarineTraffic key, port verification hits the live `/portcalls` endpoint with a ±14-day window around the invoice date. On timeout or API error, the system silently falls back to the local registry — no false positives from network issues.
+**MarineTraffic mode:** with a `MARINETRAFFIC_API_KEY`, port verification hits the `/portcalls` endpoint with a ±14-day window around the invoice date — best for historical invoice validation.
+
+**AISStream mode:** with an `AISSTREAM_API_KEY` (free at aisstream.io), port verification subscribes to a live WebSocket feed and waits up to the configured listen window (default 30 s) for the vessel to broadcast inside the port bounding box — best for current port calls.
+
+Both live modes fall back silently to the local registry on network or API error — no false positives from connectivity issues.
 
 **Mock mode:** no API key required; all checks use `maritime_registry.json`.
 
@@ -252,7 +263,8 @@ SmartInvoiceAI/
 3. Configure API keys in `.streamlit/secrets.toml`:
    ```toml
    GROQ_API_KEY = "your_groq_api_key"
-   MARINETRAFFIC_API_KEY = "your_mt_api_key"   # optional — omit for mock mode
+   MARINETRAFFIC_API_KEY = "your_mt_api_key"   # optional — historical AIS port calls
+   AISSTREAM_API_KEY = "your_aisstream_key"     # optional — real-time AIS (free at aisstream.io)
    ```
 
 4. Run the apps:
@@ -317,9 +329,10 @@ In addition to telemetry validation, Tab 3 applies document-level rules:
 - [x] VEC email header analysis (reply-to mismatch, impersonation, urgency keywords)
 - [x] Three-way verdict: CLEAR / REVIEW / BLOCKED
 - [x] BOL scanner web app — FastAPI + drag-drop frontend, LLaMA BOL extraction, cargo type mapping
+- [x] AISStream real-time WebSocket integration — live vessel position check with listen window
+- [x] IMAP mailbox integration — fetch unread invoice emails directly from Gmail, Outlook, Yahoo, or any IMAP provider
 - [ ] Auto-extract MMSI, voyage ID, and port from invoice image via LLaMA (Streamlit tab auto-fill)
 - [ ] Live IBAN verification via Open Banking / SWIFT gpi
-- [ ] IMAP listener — automatic processing on accounts payable inbox
 - [ ] REST API plugin for Odoo / ERPNext / QuickBooks
 - [ ] Multi-source AIS: AISHub + port authority records
 

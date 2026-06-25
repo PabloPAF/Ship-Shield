@@ -165,6 +165,72 @@ def ingest_eml(eml_bytes: bytes) -> dict:
     }
 
 
+def imap_fetch_invoices(
+    host: str,
+    port: int,
+    username: str,
+    password: str,
+    folder: str = "INBOX",
+    subject_filter: str = "invoice",
+    max_messages: int = 20,
+    mark_read: bool = False,
+) -> list:
+    """
+    Connect to an IMAP mailbox over SSL, search for unread messages whose subject
+    contains `subject_filter`, and return a list of ingest_eml() result dicts.
+
+    Each result is augmented with a 'uid' key (IMAP message UID as a string).
+    On connection or authentication failure, returns a single-element list with
+    an 'error' key so callers can display the error without special-casing.
+    """
+    import imaplib
+
+    results = []
+    try:
+        with imaplib.IMAP4_SSL(host, port) as imap:
+            imap.login(username, password)
+            imap.select(folder, readonly=not mark_read)
+
+            status, data = imap.search(None, f'(UNSEEN SUBJECT "{subject_filter}")')
+            if status != "OK":
+                return [{"error": f"IMAP SEARCH failed: {status}", "uid": None,
+                         "sender": "", "subject": "", "reply_to": "", "date": "",
+                         "vec_flags": [], "attachments": [], "vec_risk": "UNKNOWN"}]
+
+            uids = data[0].split()
+            if not uids:
+                return []
+
+            for uid in reversed(uids[-max_messages:]):
+                try:
+                    status, msg_data = imap.fetch(uid, "(RFC822)")
+                    if status != "OK" or not msg_data or not msg_data[0]:
+                        continue
+                    raw_bytes = msg_data[0][1]
+                    result = ingest_eml(raw_bytes)
+                    result["uid"] = uid.decode()
+                    if mark_read and not result.get("error"):
+                        imap.store(uid, "+FLAGS", "\\Seen")
+                    results.append(result)
+                except Exception as e:
+                    results.append({
+                        "error": str(e), "uid": uid.decode() if uid else None,
+                        "sender": "", "subject": "", "reply_to": "", "date": "",
+                        "vec_flags": [], "attachments": [], "vec_risk": "UNKNOWN",
+                    })
+
+    except imaplib.IMAP4.error as e:
+        return [{"error": f"IMAP authentication/connection error: {e}", "uid": None,
+                 "sender": "", "subject": "", "reply_to": "", "date": "",
+                 "vec_flags": [], "attachments": [], "vec_risk": "UNKNOWN"}]
+    except Exception as e:
+        return [{"error": str(e), "uid": None,
+                 "sender": "", "subject": "", "reply_to": "", "date": "",
+                 "vec_flags": [], "attachments": [], "vec_risk": "UNKNOWN"}]
+
+    return results
+
+
 def make_demo_eml(scenario: str) -> bytes:
     """
     Generate an in-memory .eml for UI demo purposes.
@@ -191,6 +257,27 @@ def make_demo_eml(scenario: str) -> bytes:
         msg.attach(MIMEText(body, "plain"))
         return msg.as_bytes()
 
+    elif scenario == "free_sender":
+        # MEDIUM risk: corporate display name but sent from a Gmail address — impersonation signal.
+        msg = MIMEMultipart()
+        msg["From"] = '"Hamburg Port Services GmbH" <hps.invoicing@gmail.com>'
+        msg["To"] = "ap@acme-logistics.com"
+        msg["Subject"] = "Invoice INV-2026-888 — Baltic Carrier — Port of Hamburg"
+        msg["Date"] = "Mon, 23 Jun 2026 09:15:00 +0200"
+        body = (
+            "Dear Finance Team,\n\n"
+            "Please find our invoice INV-2026-888 for port handling services\n"
+            "rendered to Baltic Carrier at Port of Hamburg on 2026-06-19.\n\n"
+            "Vessel: Baltic Carrier (MMSI: 211456200)\n"
+            "Voyage: VOY-2026-212\n"
+            "Amount: EUR 18,750.00\n"
+            "IBAN: DE89370400440532013000\n\n"
+            "Kind regards,\n"
+            "Hamburg Port Services GmbH — Accounts\n"
+        )
+        msg.attach(MIMEText(body, "plain"))
+        return msg.as_bytes()
+
     else:  # vec_attack
         msg = MIMEMultipart()
         # Typo domain: atlantlc (l→l swap) mimics atlantic
@@ -210,3 +297,27 @@ def make_demo_eml(scenario: str) -> bytes:
         )
         msg.attach(MIMEText(body, "plain"))
         return msg.as_bytes()
+
+
+def make_demo_imap_results() -> list:
+    """
+    Return a simulated IMAP inbox — three messages at different risk levels.
+
+    Identical shape to imap_fetch_invoices() output so the UI can render them
+    without any special-casing.
+
+      uid 1001 — CLEAN   : legitimate corporate email, no flags
+      uid 1002 — MEDIUM  : corporate display name sent from Gmail (impersonation signal)
+      uid 1003 — HIGH    : reply-to hijack + urgency keywords (VEC attack)
+    """
+    scenarios = [
+        ("1001", "clean"),
+        ("1002", "free_sender"),
+        ("1003", "vec_attack"),
+    ]
+    results = []
+    for uid, scenario in scenarios:
+        result = ingest_eml(make_demo_eml(scenario))
+        result["uid"] = uid
+        results.append(result)
+    return results
