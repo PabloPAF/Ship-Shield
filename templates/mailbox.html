@@ -163,6 +163,7 @@ function renderList(){
     c.appendChild(d);
   });
 }
+function docHTML(e){ return e.doc_type==="bol" ? bolHTML(e.invoice) : invoiceHTML(e.invoice); }
 function invoiceHTML(inv){
   const rows=inv.items.map(it=>`<tr><td>${it[0]}</td><td style="text-align:right">${it[1]}</td></tr>`).join("");
   return `<div class="attach"><div class="ahead"><div class="aico">PDF</div>
@@ -176,6 +177,24 @@ function invoiceHTML(inv){
     <code>Vessel: ${inv.vessel} · Port of discharge: ${inv.port}</code><br>
     <code>Beneficiary IBAN: ${inv.iban}</code></div></div></div>`;
 }
+function bolHTML(b){
+  return `<div class="attach"><div class="ahead"><div class="aico" style="background:#2a6f8e">PDF</div>
+    <div><div class="aname">${b.number}.pdf</div><div class="asize">Bill of Lading · 1 page</div></div></div>
+    <div class="inv"><div class="ititle" style="color:#2a6f8e">BILL OF LADING</div>
+    <div class="irow"><div><div class="lab">Carrier</div>${b.vendor}</div>
+    <div style="text-align:right"><div class="lab">B/L #</div>${b.number}<br><span class="lab">Shipped on board</span> ${b.date}</div></div>
+    <table><tbody>
+      <tr><td class="lab">Vessel</td><td>${b.vessel} (MMSI ${b.mmsi})</td></tr>
+      <tr><td class="lab">Voyage</td><td>${b.voyage}</td></tr>
+      <tr><td class="lab">Port of loading</td><td>${b.port_loading}</td></tr>
+      <tr><td class="lab">Port of discharge</td><td>${b.port}</td></tr>
+      <tr><td class="lab">Description of goods</td><td>${b.cargo} — ${b.qty}</td></tr>
+      <tr><td class="lab">Shipper</td><td>${b.shipper}</td></tr>
+      <tr><td class="lab">Consignee</td><td>${b.consignee}</td></tr>
+    </tbody></table>
+    <div class="logbox"><span class="lab">Physical telemetry reference</span>
+    <code>Vessel: ${b.vessel} · Port of discharge: ${b.port} · Voyage: ${b.voyage}</code></div></div></div>`;
+}
 function openEmail(id){
   activeId=id; renderList();
   const e=EMAILS.find(x=>x.id===id);
@@ -187,7 +206,7 @@ function openEmail(id){
     <div><div class="sname">${senderName(e.from)}</div><div class="saddr">&lt;${addrOnly(e.from)}&gt;</div></div>
     <div class="meta">${e.date}<div class="torow">To: ${e.to}</div>${replyRow}</div></div></div>
     <div class="checkbtnrow"><button class="ssbtn" id="ssbtn" onclick="runCheck('${e.id}')"><img class="blogo" src="/logo/shipshield_emblem.png" alt="Ship-Shield"> Ship-Shield</button></div>
-    <div class="rbody">${bodyHtml}${invoiceHTML(e.invoice)}</div>`;
+    <div class="rbody">${bodyHtml}${docHTML(e)}</div>`;
 }
 async function runCheck(id){
   const btn=document.getElementById("ssbtn");

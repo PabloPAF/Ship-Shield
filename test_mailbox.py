@@ -30,6 +30,8 @@ EXPECTED_VERDICT = {
     "dwt": "BLOCKED",       # 50,000 MT > 45,000 DWT (Case C)
     "dup": "BLOCKED",       # voyage already invoiced (Case B)
     "postdate": "BLOCKED",  # invoice 12 days off dock date (Case A)
+    "bol_clean": "CLEAR",   # Bill of Lading — Baltic Carrier / Hamburg, all matches
+    "bol_forged": "BLOCKED",# Bill of Lading — claims Felixstowe, registry says Rotterdam
 }
 
 # The single telemetry check expected to FAIL for each fraud scenario.
@@ -40,6 +42,7 @@ EXPECTED_FAIL_FIELD = {
     "dup": "voyage_id",
     "postdate": "invoice_date",
     "vec": "iban",
+    "bol_forged": "discharge_port",
 }
 
 
@@ -55,15 +58,25 @@ def test_bol_scanner_still_served():
     assert client.get("/").status_code == 200
 
 
-def test_inbox_manifest_has_eight_emails():
+def test_inbox_manifest_has_all_emails():
     r = client.get("/mailbox/emails")
     assert r.status_code == 200
     emails = r.json()
-    assert len(emails) == 8
+    assert len(emails) == 10
     assert {e["id"] for e in emails} == set(EXPECTED_VERDICT)
     for e in emails:
         assert e["invoice"]["number"]
         assert e["payload"]["mmsi"]
+
+
+def test_bol_documents_present_and_have_no_iban():
+    emails = {e["id"]: e for e in client.get("/mailbox/emails").json()}
+    for bid in ("bol_clean", "bol_forged"):
+        assert emails[bid]["doc_type"] == "bol"
+        assert "iban" not in emails[bid]["payload"]        # a BOL carries no payment detail
+    # BOL cross-check runs telemetry but skips the bank layer
+    data = client.post("/mailbox/check", json={"id": "bol_clean"}).json()
+    assert data["bank"] is None
 
 
 @pytest.mark.parametrize("email_id, verdict", EXPECTED_VERDICT.items())
