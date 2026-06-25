@@ -256,23 +256,49 @@ The Telemetry Validation tab has 10 built-in scenarios. Key examples:
 ```
 ShipShield/
 ├── enhanced_ui.py          # 6-tab Streamlit dashboard
-├── bol_scanner_app.py      # FastAPI app — BOL scanner + Accounts Payable mailbox
+├── bol_scanner_app.py      # FastAPI app — BOL scanner + Accounts Payable mailbox (all layers)
 ├── templates/
 │   ├── bol_index.html      # BOL scanner frontend — single-file, no build step
-│   └── mailbox.html        # Outlook-style AP mailbox frontend (Cross-check facts button)
-├── mailbox_inbox/          # Demo .eml inbox + inbox.json manifest (8 scenarios)
-├── telemetry_validator.py  # Shared validation engine (used by all surfaces)
-├── email_ingestor.py       # VEC email header analysis + attachment extraction
-├── utils.py                # Pydantic models, Groq client, image helpers
-├── analytics.py            # Isolation Forest anomaly detection
-├── app.py                  # Single-invoice baseline app (original SmartInvoiceAI base)
-├── maritime_registry.json  # Mock AIS registry — 3 vessels keyed by MMSI
+│   └── mailbox.html        # Outlook-style AP mailbox (HTML-escaped renderer)
+├── mailbox_inbox/          # Demo .eml inbox + inbox.json manifest (14 scenarios)
+├── telemetry_validator.py  # Layer 2 — physical telemetry (AIS port call / cargo / DWT / dates)
+├── email_ingestor.py       # Layer 1 — VEC email header analysis + attachment extraction
+├── email_forensics.py      # Layer 1 — look-alike domain, homoglyph & zero-width detection
+├── document_hygiene.py     # Layer 0 — active/hidden content scan of attachments
+├── vendor_ledger.py        # Layer 3 — hashed IBAN ledger + bank-account change-detection
+├── bank_enrich.py          # Layer 3 — IBAN/bank enrichment + Verification of Payee
+├── sanctions_screen.py     # Layer 4 — sanctions / dark-fleet screening
+├── entity_verify.py        # Layer 4 — VAT (VIES) + commercial-register verification
+├── vessel_risk.py          # Layer 2+ — Equasis / Port State Control enrichment
+├── seed_vendor_ledger.py   # rebuild vendor_ledger.json (hash-only)
+├── seed_bank_accounts.py   # rebuild account_registry.json (hash-only VoP directory)
+├── maritime_registry.json  # Mock AIS registry (vessels keyed by MMSI)
+├── sanctions_list.json     # Mock consolidated sanctions data
+├── vessel_risk.json        # Mock Equasis/PSC data
+├── company_registry.json   # Mock VAT/commercial-register data
+├── vendor_ledger.json      # Hash-only known-account ledger (safe to commit)
+├── account_registry.json   # Hash-only Verification-of-Payee directory
+├── utils.py · analytics.py · app.py
+├── test_mailbox.py         # Pytest suite for the mailbox + all layers
+├── legal/                  # GDPR Terms of Use & consent (DE authoritative + EN)
 ├── requirements.txt
-├── .streamlit/
-│   └── secrets.toml        # GROQ_API_KEY, MARINETRAFFIC_API_KEY
-├── .Dataset/               # Sample invoices in multiple languages
-└── Results/                # JSON/CSV exports, fraud reports
+├── .streamlit/secrets.toml # API keys + ledger pepper (gitignored)
+├── .Dataset/  ·  Results/
 ```
+
+### Validation layers
+
+The mailbox cross-check runs the document through five layers; any single hard
+failure (or a HIGH email-header flag) blocks the payment, and unverifiable signals
+resolve to REVIEW — never a false clear.
+
+| Layer | Question | Module(s) |
+|---|---|---|
+| 0 — Document hygiene | Is the attachment weaponised (macros, embedded JS, auto-run)? | `document_hygiene.py` |
+| 1 — Email / VEC | Is the sender spoofed, look-alike, homoglyph, urgent? | `email_ingestor.py`, `email_forensics.py` |
+| 2 — Physical telemetry | Did the vessel actually dock / carry / fit the claim? | `telemetry_validator.py`, `vessel_risk.py` |
+| 3 — Bank account | Has the account changed, and does it belong to the vendor? | `vendor_ledger.py`, `bank_enrich.py` |
+| 4 — Counterparty | Is the vendor real, valid and not sanctioned? | `sanctions_screen.py`, `entity_verify.py` |
 
 ---
 
@@ -294,6 +320,17 @@ ShipShield/
    GROQ_API_KEY = "your_groq_api_key"
    MARINETRAFFIC_API_KEY = "your_mt_api_key"   # optional — historical AIS port calls
    AISSTREAM_API_KEY = "your_aisstream_key"     # optional — real-time AIS (free at aisstream.io)
+
+   # Enrichment APIs — all optional; each falls back to a bundled offline mock
+   SANCTIONS_API_KEY = "…"                      # Layer 4 — OpenSanctions / OFAC / EU
+   EQUASIS_API_KEY   = "…"                      # Layer 2+ — Equasis / Port State Control
+   VIES_API_KEY      = "…"                      # Layer 4 — VAT / commercial register
+   VOP_API_KEY       = "…"                      # Layer 3 — Verification of Payee (open banking)
+
+   # REQUIRED for production — secret pepper for the hashed IBAN ledgers.
+   # Without it a clearly-labelled dev pepper is used (demo only). After setting
+   # it, re-run: python seed_vendor_ledger.py && python seed_bank_accounts.py
+   SHIPSHIELD_LEDGER_PEPPER = "a-long-random-secret"
    ```
 
 4. Run the apps:
