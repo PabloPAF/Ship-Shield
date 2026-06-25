@@ -20,3 +20,6 @@ env/
 # IDE
 .vscode/
 .idea/
+
+# Runtime audit log (tamper-evident; point at WORM storage in prod)
+audit_log.jsonl

@@ -35,6 +35,7 @@ from vessel_risk import assess_vessel
 from entity_verify import verify_entity
 from bank_enrich import enrich_bank
 import email_forensics
+import audit_log
 
 # ── Constants ──────────────────────────────────────────────────────────────
 
@@ -230,6 +231,12 @@ async def mailbox_emails():
     return JSONResponse(_load_inbox())
 
 
+@app.get("/mailbox/audit")
+async def mailbox_audit(limit: int = 50):
+    """Return recent audit entries plus a hash-chain integrity check."""
+    return JSONResponse({"chain": audit_log.verify_chain(), "entries": audit_log.tail(limit)})
+
+
 @app.post("/mailbox/check")
 async def mailbox_check(req: CheckRequest):
     """Cross-check one email: Layer 1 (VEC headers) + Layer 2 (physical telemetry)."""
@@ -354,9 +361,38 @@ async def mailbox_check(req: CheckRequest):
             verdict = "REVIEW"
             risk = max(risk, 0.3)
 
+    # Tamper-evident audit record (PII-light: statuses, failed codes, sources only).
+    failed = []
+    if hygiene and hygiene["status"] == "FAIL": failed.append("document_hygiene")
+    if vec["risk"] == "HIGH": failed.append("email_vec")
+    failed += [c["field"] for c in telemetry.get("checks", []) if c["status"] == "FAIL"]
+    if bank and bank["status"] == "FAIL": failed.append("vendor_bank_account")
+    if bank_vop and bank_vop["status"] == "FAIL": failed.append("bank_vop")
+    failed += [c["field"] for c in counterparty if c["status"] == "FAIL"]
+    audit_entry = audit_log.append({
+        "email_id": entry["id"],
+        "verdict": verdict,
+        "risk_score": round(risk, 2),
+        "layers": {
+            "hygiene": hygiene["status"] if hygiene else None,
+            "email_vec_risk": vec["risk"],
+            "telemetry": telemetry.get("verdict"),
+            "vessel_risk": vessel_risk["status"] if vessel_risk else None,
+            "bank": bank["status"] if bank else None,
+            "bank_vop": bank_vop["status"] if bank_vop else None,
+            "counterparty": [{"field": c["field"], "status": c["status"]} for c in counterparty],
+        },
+        "failed_indicators": failed,
+        "sources": sorted({telemetry.get("source", ""),
+                           *(c.get("source", "") for c in counterparty),
+                           (vessel_risk or {}).get("source", ""),
+                           (bank_vop or {}).get("source", "")} - {""}),
+    })
+
     return JSONResponse({
         "id": entry["id"],
         "verdict": verdict,
+        "audit": {"entry_hash": audit_entry["entry_hash"], "ts": audit_entry["ts"]},
         "hygiene": hygiene,
         "bank": bank,
         "bank_vop": bank_vop,

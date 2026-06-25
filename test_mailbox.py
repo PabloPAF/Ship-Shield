@@ -191,6 +191,36 @@ def test_renderer_escapes_dynamic_content():
         assert raw not in html, f"unescaped interpolation left in template: {raw}"
 
 
+# ── Tamper-evident audit log ─────────────────────────────────────────────────
+
+def test_check_writes_audit_entry_and_chain_valid():
+    r = client.post("/mailbox/check", json={"id": "vec"}).json()
+    assert "entry_hash" in r["audit"] and len(r["audit"]["entry_hash"]) == 64
+    audit = client.get("/mailbox/audit").json()
+    assert audit["chain"]["valid"] is True
+    assert audit["chain"]["entries"] >= 1
+
+def test_audit_chain_detects_tampering(tmp_path, monkeypatch):
+    import audit_log, json as _json
+    monkeypatch.setattr(audit_log, "LOG_PATH", tmp_path / "a.jsonl")
+    audit_log.append({"email_id": "x", "verdict": "CLEAR"})
+    audit_log.append({"email_id": "y", "verdict": "BLOCKED"})
+    assert audit_log.verify_chain()["valid"] is True
+    lines = (tmp_path / "a.jsonl").read_text().splitlines()
+    e = _json.loads(lines[0]); e["record"]["verdict"] = "TAMPERED"
+    lines[0] = _json.dumps(e)
+    (tmp_path / "a.jsonl").write_text("\n".join(lines) + "\n")
+    res = audit_log.verify_chain()
+    assert res["valid"] is False and res["broken_at"] == 1
+
+def test_audit_log_is_pii_light():
+    client.post("/mailbox/check", json={"id": "vec"})
+    import pathlib
+    raw = pathlib.Path("audit_log.jsonl").read_text()
+    assert "GB29NWBK60161331926819" not in raw   # no raw IBANs
+    assert "Dear Finance Team" not in raw          # no email bodies
+
+
 # ── Layer 0: document hygiene (active/hidden content in attachments) ─────────
 
 def test_active_content_pdf_is_quarantined():
