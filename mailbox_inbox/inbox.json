@@ -545,5 +545,50 @@
       "voyage_id": "VOY-2026-3001",
       "cargo_quantity_mt": 15000
     }
+  },
+  {
+    "id": "vessel_risk",
+    "file": "13_vessel_risk.eml",
+    "color": "#c19c00",
+    "unread": true,
+    "time": "Sat 12:10",
+    "from": "accounts@oldsalt-shipping.example",
+    "reply_to": null,
+    "to": "ap@acme-logistics.com",
+    "subject": "Invoice INV-2026-3002 - Rusty Mariner - Port of Hamburg",
+    "date": "Sat, 20 Jun 2026 12:10:00 +0100",
+    "body": "Dear Accounts Payable,\n\nAttached invoice INV-2026-3002 for coal discharge at Port of Hamburg on 2026-06-20.\nVessel: Rusty Mariner (MMSI 232888000) - Voyage VOY-2026-3002.\n\nOld Salt Shipping Ltd - Accounts\n",
+    "doc_type": "invoice",
+    "invoice": {
+      "number": "INV-2026-3002",
+      "vendor": "Old Salt Shipping Ltd",
+      "vessel": "Rusty Mariner",
+      "mmsi": "232888000",
+      "port": "Port of Hamburg",
+      "date": "2026-06-20",
+      "currency": "EUR",
+      "total": "60,000.00",
+      "items": [
+        [
+          "Bulk coal freight (25,000 MT)",
+          "EUR 55,000.00"
+        ],
+        [
+          "Port dues",
+          "EUR 5,000.00"
+        ]
+      ],
+      "iban": "DE12 5001 0517 0000 0003 33"
+    },
+    "payload": {
+      "mmsi": "232888000",
+      "discharge_port": "Port of Hamburg",
+      "invoice_date": "2026-06-20",
+      "submission_date": "2026-06-21",
+      "iban": "DE12500105170000000333",
+      "cargo_type": "coal",
+      "voyage_id": "VOY-2026-3002",
+      "cargo_quantity_mt": 25000
+    }
   }
 ]

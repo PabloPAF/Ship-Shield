@@ -34,6 +34,7 @@ EXPECTED_VERDICT = {
     "bol_forged": "BLOCKED",# Bill of Lading — claims Felixstowe, registry says Rotterdam
     "hygiene": "BLOCKED",   # clean invoice, but the attached PDF carries active content (Layer 0)
     "sanctioned": "BLOCKED",# clean telemetry, but vessel/carrier is sanctioned (Layer 4)
+    "vessel_risk": "REVIEW", # clean telemetry, but vessel has PSC detentions (Layer 2 enrichment)
 }
 
 # The single telemetry check expected to FAIL for each fraud scenario.
@@ -64,7 +65,7 @@ def test_inbox_manifest_has_all_emails():
     r = client.get("/mailbox/emails")
     assert r.status_code == 200
     emails = r.json()
-    assert len(emails) == 12
+    assert len(emails) == 13
     assert {e["id"] for e in emails} == set(EXPECTED_VERDICT)
     for e in emails:
         assert e["invoice"]["number"]
@@ -128,6 +129,18 @@ def test_clean_emails_pass_sanctions():
     for eid in ("clean1", "clean2", "bol_clean"):
         s = _counterparty(client.post("/mailbox/check", json={"id": eid}).json(), "sanctions")
         assert s and s["status"] == "PASS"
+
+
+# ── Layer 2 enrichment: vessel risk (Equasis / PSC) ─────────────────────────
+
+def test_detained_vessel_review():
+    data = client.post("/mailbox/check", json={"id": "vessel_risk"}).json()
+    assert data["vessel_risk"]["status"] == "WARN"
+    assert data["verdict"] == "REVIEW"
+
+def test_clean_vessels_pass_risk():
+    for eid in ("clean1", "clean2", "bol_clean"):
+        assert client.post("/mailbox/check", json={"id": eid}).json()["vessel_risk"]["status"] == "PASS"
 
 
 # ── Layer 0: document hygiene (active/hidden content in attachments) ─────────

@@ -50,5 +50,18 @@
     "registered_iban": "NL55INGB0000000777",
     "carrier": "Volga Maritime OOO",
     "invoiced_voyages": []
+  },
+  "232888000": {
+    "vessel_id": "VESS-2888",
+    "vessel_name": "Rusty Mariner",
+    "mmsi": "232888000",
+    "imo": "9300333",
+    "vessel_type": "bulk_carrier",
+    "deadweight_tonnes": 30000,
+    "last_docked_port": "Port of Hamburg",
+    "dock_date": "2026-06-20",
+    "registered_iban": "DE12500105170000000333",
+    "carrier": "Old Salt Shipping Ltd",
+    "invoiced_voyages": []
   }
 }

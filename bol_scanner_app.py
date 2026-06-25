@@ -31,6 +31,7 @@ from email_ingestor import ingest_eml
 from vendor_ledger import check_vendor_iban
 from document_hygiene import scan_attachments
 from sanctions_screen import screen_counterparty
+from vessel_risk import assess_vessel
 import email_forensics
 
 # ── Constants ──────────────────────────────────────────────────────────────
@@ -290,6 +291,14 @@ async def mailbox_check(req: CheckRequest):
     )
     counterparty.append(sanctions)
 
+    # Layer 2 (addendum) — vessel-risk enrichment (Equasis / Port State Control).
+    vessel_risk = assess_vessel(
+        imo=entry["payload"].get("imo", ""),
+        mmsi=entry["payload"].get("mmsi", ""),
+        vessel_name=telemetry.get("vessel_name", "") or "",
+        equasis_api_key=_read_secret("EQUASIS_API_KEY"),
+    )
+
     # Combined verdict — a HIGH email-header flag or a bank-account change escalates to BLOCKED
     verdict = telemetry.get("verdict", "REVIEW")
     risk = float(telemetry.get("risk_score", 0.0))
@@ -320,12 +329,17 @@ async def mailbox_check(req: CheckRequest):
         elif c["status"] == "WARN" and verdict == "CLEAR":
             verdict = "REVIEW"
             risk = max(risk, 0.3)
+    if vessel_risk:
+        if vessel_risk["status"] == "WARN" and verdict == "CLEAR":
+            verdict = "REVIEW"
+            risk = max(risk, 0.3)
 
     return JSONResponse({
         "id": entry["id"],
         "verdict": verdict,
         "hygiene": hygiene,
         "bank": bank,
+        "vessel_risk": vessel_risk,
         "counterparty": counterparty,
         "risk_score": round(risk, 2),
         "vec": vec,

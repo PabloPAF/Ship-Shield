@@ -1,0 +1,12 @@
+{
+  "_note": "Mock vessel-risk data for offline demo (stands in for Equasis + Paris/Tokyo MoU Port State Control). Keyed by IMO. Replaced by a live feed when an EQUASIS/PSC source is configured.",
+  "9320001": {"mmsi": "244170218", "flag": "Netherlands", "class_society": "DNV", "pandi": "Gard", "owner": "Atlantic Shipping BV", "detentions": []},
+  "9201234": {"mmsi": "211456200", "flag": "Germany", "class_society": "DNV", "pandi": "Skuld", "owner": "Nordic Freight GmbH", "detentions": []},
+  "9456789": {"mmsi": "224143870", "flag": "Spain", "class_society": "Bureau Veritas", "pandi": "North", "owner": "Iberian Cargo SL", "detentions": []},
+  "9700777": {"mmsi": "273345000", "flag": "Russia", "class_society": "RS", "pandi": "unknown", "owner": "Volga Maritime OOO", "detentions": []},
+  "9300333": {"mmsi": "232888000", "flag": "Panama", "class_society": "(withdrawn)", "pandi": "unknown", "owner": "Old Salt Shipping Ltd",
+              "detentions": [
+                {"port": "Rotterdam", "date": "2026-03-11", "authority": "Paris MoU", "deficiencies": 14},
+                {"port": "Algeciras", "date": "2025-11-02", "authority": "Paris MoU", "deficiencies": 9}
+              ]}
+}

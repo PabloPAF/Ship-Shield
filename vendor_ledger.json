@@ -42,5 +42,16 @@
         "last_seen": "2026-06-25"
       }
     }
+  },
+  "old salt shipping ltd": {
+    "display_name": "Old Salt Shipping Ltd",
+    "ibans": {
+      "46ecbdf45aa5029f29e31912af529c45976afdf31fe45b100aaff0c299f07571": {
+        "confirmed": true,
+        "country": "DE",
+        "first_seen": "2026-06-25",
+        "last_seen": "2026-06-25"
+      }
+    }
   }
 }
