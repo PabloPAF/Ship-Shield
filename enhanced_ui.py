@@ -1,10 +1,13 @@
 import streamlit as st
 import json
 import base64
+import os
 import pandas as pd
 from utils import InvoiceData, GroqClient, preprocess_image, process_image_upload, process_image_url, display_image_preview, setup_page, show_extraction_button, display_results, display_error, run_chatbot, edit_invoice_data, export_to_csv
 from uuid import uuid4
 import argparse
+from telemetry_validator import telemetry_context_validation
+from email_ingestor import ingest_eml, make_demo_eml
 
 # Invoice type detection
 def detect_invoice_type(invoice_data: dict) -> str:
@@ -193,7 +196,7 @@ def enhanced_ui():
     st.session_state.groq_api_key = groq_api_key
 
     # Tabs
-    tab1, tab2, tab3 = st.tabs(["📄 Invoice Extraction", "🤖 Chatbot", "🚨 Fraud Detection"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📄 Invoice Extraction", "🤖 Chatbot", "🚨 Fraud Detection", "🛰️ Telemetry Validation", "📧 Email Ingestion"])
 
     with tab1:
         st.header("Invoice Extraction")
@@ -452,7 +455,335 @@ def enhanced_ui():
             detect_fraud(st.session_state.invoices)
         else:
             st.info("No invoices processed yet. Upload invoices in the Extraction tab.")
-    
+
+    with tab4:
+        st.header("Telemetry Validation")
+        st.markdown(
+            "> **Physical reality check:** Cross-references invoice logistics identifiers "
+            "against the AIS maritime registry. If the ship didn't dock, the payment doesn't clear."
+        )
+
+        telemetry_enabled = st.toggle("Enable Telemetry Validation", value=False, key="telemetry_toggle")
+
+        if not telemetry_enabled:
+            st.info("Toggle on Telemetry Validation above to begin physical event verification.")
+        else:
+            # Resolve MarineTraffic API key — live mode if present, mock mode otherwise
+            mt_api_key = None
+            try:
+                mt_api_key = st.secrets.get("MARINETRAFFIC_API_KEY")
+            except Exception:
+                pass
+            if not mt_api_key:
+                mt_api_key = os.getenv("MARINETRAFFIC_API_KEY")
+
+            if mt_api_key:
+                st.info("Live mode — port of discharge verified via MarineTraffic AIS API.")
+            else:
+                st.warning("Mock mode — no MARINETRAFFIC_API_KEY found. Using local registry.")
+
+            DEMO_SCENARIOS = {
+                "✅ CLEAR — Vessel docked, port matches, IBAN correct": {
+                    "mmsi": "244170218",
+                    "discharge_port": "Port of Rotterdam",
+                    "invoice_date": "2026-06-21",
+                    "submission_date": "2026-06-23",
+                    "iban": "NL91ABNA0417164300",
+                },
+                "🚨 BLOCKED — Port mismatch (fraudulent discharge port)": {
+                    "mmsi": "244170218",
+                    "discharge_port": "Port of Antwerp",
+                    "invoice_date": "2026-06-21",
+                    "submission_date": "",
+                    "iban": "NL91ABNA0417164300",
+                },
+                "🚨 BLOCKED — Unknown vessel (not in registry)": {
+                    "mmsi": "000000000",
+                    "discharge_port": "Port of Rotterdam",
+                    "invoice_date": "2026-06-21",
+                    "submission_date": "",
+                    "iban": "NL91ABNA0417164300",
+                },
+                "🚨 BLOCKED — IBAN hijacked (account substitution)": {
+                    "mmsi": "211456200",
+                    "discharge_port": "Port of Hamburg",
+                    "invoice_date": "2026-06-19",
+                    "submission_date": "",
+                    "iban": "GB29NWBK60161331926819",
+                },
+                "🚨 BLOCKED — Date anomaly (Case A — forged BL date)": {
+                    "mmsi": "244170218",
+                    "discharge_port": "Port of Rotterdam",
+                    "invoice_date": "2026-01-01",
+                    "submission_date": "",
+                    "iban": "NL91ABNA0417164300",
+                },
+                "🚨 BLOCKED — Late submission (Case D — fake agency invoice)": {
+                    "mmsi": "244170218",
+                    "discharge_port": "Port of Rotterdam",
+                    "invoice_date": "2026-06-21",
+                    "submission_date": "2026-07-25",
+                    "iban": "NL91ABNA0417164300",
+                    "cargo_type": "",
+                    "voyage_id": "",
+                    "cargo_quantity_mt": "",
+                },
+                "🚨 BLOCKED — Duplicate voyage / ghost cargo (Case B)": {
+                    "mmsi": "244170218",
+                    "discharge_port": "Port of Rotterdam",
+                    "invoice_date": "2026-06-21",
+                    "submission_date": "",
+                    "iban": "NL91ABNA0417164300",
+                    "cargo_type": "containers",
+                    "voyage_id": "VOY-2026-441",
+                    "cargo_quantity_mt": "",
+                },
+                "🚨 BLOCKED — Cargo type mismatch (Case B — tanker vs grain)": {
+                    "mmsi": "224143870",
+                    "discharge_port": "Port of Barcelona",
+                    "invoice_date": "2026-06-23",
+                    "submission_date": "",
+                    "iban": "ES9121000418450200051332",
+                    "cargo_type": "grain",
+                    "voyage_id": "",
+                    "cargo_quantity_mt": "",
+                },
+                "🚨 BLOCKED — DWT exceeded (Case C — quantity overstated)": {
+                    "mmsi": "211456200",
+                    "discharge_port": "Port of Hamburg",
+                    "invoice_date": "2026-06-19",
+                    "submission_date": "",
+                    "iban": "DE89370400440532013000",
+                    "cargo_type": "grain",
+                    "voyage_id": "",
+                    "cargo_quantity_mt": "60000",
+                },
+                "✏️ Manual input": None,
+            }
+
+            mode = st.radio(
+                "Invoice scenario",
+                list(DEMO_SCENARIOS.keys()),
+                key="telemetry_mode",
+                help="Select a demo scenario or enter invoice details manually.",
+            )
+
+            prefill = DEMO_SCENARIOS[mode] or {}
+
+            # Pre-populate invoice_date from last extracted invoice when in manual mode
+            extracted_invoice_date = ""
+            if st.session_state.get("invoices"):
+                last_date = st.session_state.invoices[-1]["invoice"].invoice_date
+                if last_date:
+                    extracted_invoice_date = last_date
+
+            with st.form("telemetry_form"):
+                st.subheader("Invoice Logistics Identifiers")
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    mmsi = st.text_input("MMSI", value=prefill.get("mmsi", ""), placeholder="e.g. 244170218")
+                    invoice_date_default = prefill.get("invoice_date") or extracted_invoice_date
+                    invoice_date = st.text_input("Invoice Date", value=invoice_date_default, placeholder="YYYY-MM-DD")
+                    submission_date = st.text_input("Submission Date (optional)", value=prefill.get("submission_date", ""), placeholder="YYYY-MM-DD")
+                with col_b:
+                    discharge_port = st.text_input("Port of Discharge", value=prefill.get("discharge_port", ""), placeholder="e.g. Port of Rotterdam")
+                    iban = st.text_input("Beneficiary IBAN", value=prefill.get("iban", ""), placeholder="e.g. NL91ABNA0417164300")
+
+                with st.expander("Cargo Checks — Cases B & C (optional)"):
+                    col_c, col_d = st.columns(2)
+                    with col_c:
+                        voyage_id = st.text_input("Voyage ID", value=prefill.get("voyage_id", ""), placeholder="e.g. VOY-2026-441")
+                        cargo_type = st.text_input("Cargo Type", value=prefill.get("cargo_type", ""), placeholder="e.g. grain, crude_oil, containers")
+                    with col_d:
+                        cargo_qty_str = prefill.get("cargo_quantity_mt", "") or ""
+                        cargo_qty_val = float(cargo_qty_str) if cargo_qty_str else 0.0
+                        cargo_quantity_mt = st.number_input("Cargo Quantity (MT)", min_value=0.0, value=cargo_qty_val, step=100.0)
+
+                submitted = st.form_submit_button("Run Telemetry Check", type="primary")
+
+            if extracted_invoice_date and mode == "✏️ Manual input":
+                st.caption(f"Invoice date pre-filled from last extracted invoice ({extracted_invoice_date}).")
+
+            if submitted:
+                invoice_payload = {
+                    "mmsi": mmsi,
+                    "discharge_port": discharge_port,
+                    "invoice_date": invoice_date,
+                    "submission_date": submission_date,
+                    "iban": iban,
+                    "cargo_type": cargo_type,
+                    "voyage_id": voyage_id,
+                    "cargo_quantity_mt": cargo_quantity_mt if cargo_quantity_mt > 0 else None,
+                }
+                result = telemetry_context_validation(invoice_payload, marinetraffic_api_key=mt_api_key)
+
+                st.divider()
+                st.subheader("Validation Result")
+
+                verdict = result.get("verdict", "BLOCKED" if result["is_tampered"] else "CLEAR")
+                if verdict == "BLOCKED":
+                    st.error("HIGH RISK — Telemetry mismatch detected")
+                    st.markdown(f"**Risk score:** `{result['risk_score']}`")
+                    st.markdown(f"**Reason:** {result['overall_reason']}")
+                elif verdict == "REVIEW":
+                    st.warning("NEEDS REVIEW — Could not fully verify against AIS data")
+                    st.markdown(f"**Risk score:** `{result['risk_score']}`")
+                    st.markdown(f"**Details:** {result['overall_reason']}")
+                else:
+                    st.success("Telemetry CLEAR — Physical event confirmed")
+                    st.markdown(f"**Risk score:** `{result['risk_score']}`")
+                    st.markdown(f"**Status:** {result['overall_reason']}")
+
+                if result.get("vessel_name"):
+                    st.markdown(
+                        f"**Vessel:** {result['vessel_name']} &nbsp;|&nbsp; "
+                        f"**Carrier:** {result.get('carrier', '—')} &nbsp;|&nbsp; "
+                        f"**Last dock date:** {result.get('dock_date', '—')} &nbsp;|&nbsp; "
+                        f"**Source:** `{result.get('source', '—')}`",
+                        unsafe_allow_html=True,
+                    )
+
+                st.subheader("Check Breakdown")
+                for check in result.get("checks", []):
+                    if check["status"] == "PASS":
+                        icon = "✅"
+                    elif check["status"] == "WARN":
+                        icon = "⚠️"
+                    else:
+                        icon = "❌"
+                    st.markdown(f"{icon} **`{check['field']}`** — {check['detail']}")
+
+    # --- Tab 5: Email Ingestion / VEC Detection ---
+    with tab5:
+        st.header("Email Ingestion — VEC Detection")
+        st.markdown(
+            "> Upload a forwarded invoice email (`.eml`) to detect **Vendor Email Compromise** "
+            "header indicators and extract any attached invoice documents for validation."
+        )
+
+        input_mode = st.radio(
+            "Input method",
+            ["Upload .eml file", "Demo scenario"],
+            horizontal=True,
+            key="email_input_mode",
+        )
+
+        eml_bytes = None
+
+        if input_mode == "Upload .eml file":
+            uploaded_eml = st.file_uploader("Upload invoice email (.eml)", type=["eml"], key="eml_uploader")
+            if uploaded_eml:
+                eml_bytes = uploaded_eml.read()
+        else:
+            demo_choice = st.selectbox(
+                "Select demo scenario",
+                [
+                    "✅ CLEAN — Legitimate invoice email (no suspicious headers)",
+                    "🚨 HIGH RISK — VEC attack (reply-to hijack + urgency keywords)",
+                ],
+                key="demo_eml_choice",
+            )
+            scenario_key = "clean" if "CLEAN" in demo_choice else "vec_attack"
+            eml_bytes = make_demo_eml(scenario_key)
+
+        if eml_bytes:
+            result = ingest_eml(eml_bytes)
+
+            if result.get("error"):
+                st.error(f"Failed to parse email: {result['error']}")
+            else:
+                # ── Email metadata ──────────────────────────────────────────
+                st.subheader("Email Headers")
+                meta_cols = st.columns(2)
+                with meta_cols[0]:
+                    st.markdown(f"**From:** {result['sender'] or '—'}")
+                    st.markdown(f"**Subject:** {result['subject'] or '—'}")
+                with meta_cols[1]:
+                    st.markdown(f"**Date:** {result['date'] or '—'}")
+                    reply_to_val = result["reply_to"]
+                    if reply_to_val:
+                        st.markdown(f"**Reply-To:** ⚠️ `{reply_to_val}`")
+                    else:
+                        st.markdown("**Reply-To:** *(not set)*")
+
+                st.divider()
+
+                # ── VEC risk banner ──────────────────────────────────────────
+                vec_risk = result["vec_risk"]
+                flags = result["vec_flags"]
+
+                if vec_risk == "HIGH":
+                    st.error("🚨 HIGH VEC RISK — Strong indicators of Vendor Email Compromise detected")
+                elif vec_risk == "MEDIUM":
+                    st.warning("⚠️ MEDIUM VEC RISK — Suspicious header patterns found")
+                elif vec_risk == "LOW":
+                    st.warning("⚠️ LOW VEC RISK — Minor indicators; proceed with caution")
+                else:
+                    st.success("✅ No VEC indicators detected in email headers")
+
+                if flags:
+                    st.subheader("VEC Flag Details")
+                    for flag in flags:
+                        sev = flag["severity"]
+                        icon = "🚨" if sev == "HIGH" else ("⚠️" if sev == "MEDIUM" else "🔶")
+                        st.markdown(f"{icon} **[{sev}]** `{flag['code']}` — {flag['detail']}")
+
+                st.divider()
+
+                # ── Attachments ──────────────────────────────────────────────
+                attachments = result["attachments"]
+                st.subheader(f"Attachments ({len(attachments)} found)")
+
+                if not attachments:
+                    st.info("No invoice attachments (PDF or image) found in this email.")
+                else:
+                    for idx, att in enumerate(attachments):
+                        att_label = f"📎 {att['filename']} ({att['content_type']})"
+                        with st.expander(att_label, expanded=(idx == 0)):
+                            if att["is_image"]:
+                                st.image(att["bytes"], caption=att["filename"], use_container_width=True)
+                                if st.button(
+                                    f"Extract Invoice Data from {att['filename']}",
+                                    key=f"extract_att_{idx}",
+                                ):
+                                    groq_client = GroqClient(st.session_state.groq_api_key)
+                                    with st.spinner("Extracting invoice data via LLaMA…"):
+                                        invoice_data = groq_client.extract_invoice_data(
+                                            att["bytes"], att["content_type"]
+                                        )
+                                    if invoice_data:
+                                        st.session_state.invoices.append(invoice_data)
+                                        st.session_state.invoice_data = invoice_data
+                                        st.success(
+                                            f"Invoice extracted: {invoice_data.invoice_number}. "
+                                            "Pre-filled into Telemetry Validation tab."
+                                        )
+                                        # Pre-fill telemetry form
+                                        st.session_state["tel_invoice_date"] = invoice_data.invoice_date or ""
+                                        st.rerun()
+                                    else:
+                                        st.error("Extraction failed — check that the image is a legible invoice.")
+                            else:
+                                st.markdown(
+                                    f"**{att['filename']}** ({att['content_type']}, "
+                                    f"{len(att['bytes']):,} bytes)"
+                                )
+                                st.info(
+                                    "PDF extraction requires a PDF-to-image conversion step. "
+                                    "Save as PNG/JPEG and upload via the Invoice Extraction tab."
+                                )
+
+                # ── Advisory ────────────────────────────────────────────────
+                if vec_risk in ("HIGH", "MEDIUM"):
+                    st.divider()
+                    st.subheader("Recommended Actions")
+                    st.markdown(
+                        "- **Do not process payment** until the invoice is verified via a known-good contact.\n"
+                        "- Call the vendor using a phone number from your existing records — not from this email.\n"
+                        "- Forward the email to your security team for header forensics.\n"
+                        "- If an IBAN was changed, cross-check it against the **Telemetry Validation** tab."
+                    )
+
     # Batch processing status
     display_batch_status(st.session_state.invoices)
 

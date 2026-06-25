@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BOL Authenticity Scanner — SmartInvoiceAI</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0f1117;
+      --surface:  #1a1d27;
+      --card:     #22263a;
+      --border:   #2e3250;
+      --text:     #e8eaf0;
+      --muted:    #8b90a8;
+      --accent:   #4f8ef7;
+      --clear:    #00c36a;
+      --review:   #f7a000;
+      --blocked:  #ff4b4b;
+      --pass:     #00c36a;
+      --warn:     #f7a000;
+      --fail:     #ff4b4b;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+    .logo span { color: var(--accent); }
+    .badge {
+      font-size: 11px;
+      font-weight: 600;
+      background: rgba(79,142,247,.15);
+      color: var(--accent);
+      border: 1px solid rgba(79,142,247,.3);
+      padding: 2px 8px;
+      border-radius: 20px;
+      letter-spacing: .5px;
+      text-transform: uppercase;
+    }
+
+    /* ── Layout ── */
+    main {
+      flex: 1;
+      max-width: 960px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 40px 24px 60px;
+    }
+
+    h1 { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+    .subtitle { color: var(--muted); font-size: 14px; margin-bottom: 36px; line-height: 1.5; }
+
+    /* ── Upload zone ── */
+    .upload-area {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 56px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      background: var(--surface);
+      position: relative;
+    }
+    .upload-area:hover, .upload-area.drag-over {
+      border-color: var(--accent);
+      background: rgba(79,142,247,.06);
+    }
+    .upload-area input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+    .upload-icon { font-size: 40px; margin-bottom: 12px; }
+    .upload-label { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+    .upload-hint { color: var(--muted); font-size: 13px; }
+
+    /* ── Preview strip ── */
+    #preview-strip {
+      display: none;
+      margin-top: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      gap: 20px;
+      align-items: flex-start;
+    }
+    #preview-strip.visible { display: flex; }
+    #preview-img {
+      width: 160px;
+      min-width: 160px;
+      border-radius: 8px;
+      object-fit: contain;
+      background: #111;
+      border: 1px solid var(--border);
+    }
+    .file-meta { flex: 1; }
+    .file-name { font-weight: 600; font-size: 15px; margin-bottom: 4px; word-break: break-all; }
+    .file-size { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+
+    /* ── Scan button ── */
+    #scan-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 24px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .2s, transform .1s;
+    }
+    #scan-btn:hover:not(:disabled) { opacity: .88; }
+    #scan-btn:active:not(:disabled) { transform: scale(.98); }
+    #scan-btn:disabled { opacity: .45; cursor: not-allowed; }
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Step indicator ── */
+    #steps {
+      display: none;
+      margin-top: 20px;
+      gap: 6px;
+      flex-direction: column;
+    }
+    #steps.visible { display: flex; }
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--muted);
+      transition: color .2s;
+    }
+    .step.active { color: var(--accent); }
+    .step.done { color: var(--clear); }
+    .step-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      flex-shrink: 0;
+    }
+
+    /* ── Results ── */
+    #results {
+      display: none;
+      margin-top: 32px;
+    }
+    #results.visible { display: block; }
+
+    /* Verdict banner */
+    .verdict-banner {
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .verdict-banner.CLEAR   { background: rgba(0,195,106,.12); border: 1px solid rgba(0,195,106,.35); }
+    .verdict-banner.REVIEW  { background: rgba(247,160,0,.12); border: 1px solid rgba(247,160,0,.35); }
+    .verdict-banner.BLOCKED { background: rgba(255,75,75,.12); border: 1px solid rgba(255,75,75,.35); }
+    .verdict-icon { font-size: 32px; }
+    .verdict-label { font-size: 20px; font-weight: 700; }
+    .verdict-label.CLEAR   { color: var(--clear); }
+    .verdict-label.REVIEW  { color: var(--review); }
+    .verdict-label.BLOCKED { color: var(--blocked); }
+    .verdict-reason { color: var(--muted); font-size: 13px; margin-top: 3px; line-height: 1.5; }
+    .verdict-score {
+      margin-left: auto;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .verdict-score .score-val {
+      font-size: 28px;
+      font-weight: 800;
+      display: block;
+    }
+    .verdict-score .score-label { font-size: 11px; color: var(--muted); text-transform: uppercase; }
+
+    /* Two column layout */
+    .results-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 640px) {
+      .results-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Cards */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .card-title {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .8px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    /* BOL fields table */
+    .field-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 7px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      gap: 12px;
+    }
+    .field-row:last-child { border-bottom: none; }
+    .field-key { color: var(--muted); flex-shrink: 0; }
+    .field-val { text-align: right; word-break: break-word; font-weight: 500; }
+    .field-val.missing { color: var(--muted); font-style: italic; }
+
+    /* Check items */
+    .check-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .check-item:last-child { border-bottom: none; }
+    .check-icon { flex-shrink: 0; font-size: 15px; margin-top: 1px; }
+    .check-field {
+      font-weight: 600;
+      font-size: 11px;
+      font-family: monospace;
+      background: var(--card);
+      padding: 1px 6px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .check-detail { color: var(--muted); margin-top: 2px; line-height: 1.45; }
+
+    /* Mode badge */
+    .mode-note {
+      margin-top: 16px;
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+    }
+    .mode-note strong { color: var(--text); }
+
+    /* Error state */
+    .error-box {
+      background: rgba(255,75,75,.1);
+      border: 1px solid rgba(255,75,75,.35);
+      border-radius: 10px;
+      padding: 16px 20px;
+      color: var(--blocked);
+      font-size: 14px;
+    }
+
+    /* Reset button */
+    #reset-btn {
+      display: none;
+      margin-top: 24px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 8px 20px;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: border-color .2s, color .2s;
+    }
+    #reset-btn:hover { border-color: var(--accent); color: var(--accent); }
+    #reset-btn.visible { display: inline-block; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Smart<span>Invoice</span>AI</div>
+  <div class="badge">BOL Scanner</div>
+</header>
+
+<main>
+  <h1>Bill of Lading Authenticity Scanner</h1>
+  <p class="subtitle">
+    Upload a Bill of Lading image to verify vessel identity, port of discharge, cargo type,
+    and tonnage against live AIS telemetry data. Catches forged BLs and ghost cargo schemes
+    that pass standard document checks.
+  </p>
+
+  <!-- Upload zone -->
+  <div class="upload-area" id="drop-zone">
+    <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp,image/tiff" />
+    <div class="upload-icon">⬆️</div>
+    <div class="upload-label">Drop a Bill of Lading here</div>
+    <div class="upload-hint">or click to browse &nbsp;·&nbsp; JPEG · PNG · WebP</div>
+  </div>
+
+  <!-- Preview strip -->
+  <div id="preview-strip">
+    <img id="preview-img" src="" alt="BOL preview" />
+    <div class="file-meta">
+      <div class="file-name" id="file-name">—</div>
+      <div class="file-size" id="file-size">—</div>
+      <button id="scan-btn">
+        <span class="spinner" id="spinner"></span>
+        <span id="scan-label">Scan for Authenticity</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Step indicator -->
+  <div id="steps">
+    <div class="step" id="step-extract">
+      <div class="step-dot"></div>Extracting logistics identifiers via LLaMA-4…
+    </div>
+    <div class="step" id="step-validate">
+      <div class="step-dot"></div>Running telemetry validation against AIS registry…
+    </div>
+    <div class="step" id="step-done">
+      <div class="step-dot"></div>Analysis complete
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="results"></div>
+  <button id="reset-btn">← Scan another document</button>
+</main>
+
+<script>
+  const dropZone   = document.getElementById('drop-zone');
+  const fileInput  = document.getElementById('file-input');
+  const preview    = document.getElementById('preview-strip');
+  const previewImg = document.getElementById('preview-img');
+  const fileName   = document.getElementById('file-name');
+  const fileSize   = document.getElementById('file-size');
+  const scanBtn    = document.getElementById('scan-btn');
+  const spinner    = document.getElementById('spinner');
+  const scanLabel  = document.getElementById('scan-label');
+  const steps      = document.getElementById('steps');
+  const results    = document.getElementById('results');
+  const resetBtn   = document.getElementById('reset-btn');
+
+  let selectedFile = null;
+
+  // ── File selection ──────────────────────────────────────────────────────
+
+  function handleFile(file) {
+    if (!file) return;
+    selectedFile = file;
+    const url = URL.createObjectURL(file);
+    previewImg.src = url;
+    fileName.textContent = file.name;
+    fileSize.textContent = (file.size / 1024).toFixed(1) + ' KB';
+    preview.classList.add('visible');
+    results.innerHTML = '';
+    results.classList.remove('visible');
+    resetBtn.classList.remove('visible');
+    steps.classList.remove('visible');
+  }
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) handleFile(fileInput.files[0]);
+  });
+
+  dropZone.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropZone.classList.add('drag-over');
+  });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) { fileInput.files = e.dataTransfer.files; handleFile(file); }
+  });
+
+  // ── Scan ────────────────────────────────────────────────────────────────
+
+  scanBtn.addEventListener('click', async () => {
+    if (!selectedFile) return;
+
+    // Loading state
+    scanBtn.disabled = true;
+    spinner.style.display = 'block';
+    scanLabel.textContent = 'Scanning…';
+    steps.classList.add('visible');
+    results.innerHTML = '';
+    results.classList.remove('visible');
+    resetBtn.classList.remove('visible');
+
+    setStep('extract');
+
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+
+    let data;
+    try {
+      setStep('validate');
+      const resp = await fetch('/scan', { method: 'POST', body: formData });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+        throw new Error(err.detail || resp.statusText);
+      }
+      data = await resp.json();
+    } catch (err) {
+      setStep(null);
+      results.innerHTML = `<div class="error-box">❌ ${escHtml(err.message)}</div>`;
+      results.classList.add('visible');
+      resetBtn.classList.add('visible');
+      resetScanBtn();
+      return;
+    }
+
+    setStep('done');
+    renderResults(data);
+    resetScanBtn();
+    resetBtn.classList.add('visible');
+  });
+
+  function resetScanBtn() {
+    scanBtn.disabled = false;
+    spinner.style.display = 'none';
+    scanLabel.textContent = 'Scan for Authenticity';
+  }
+
+  function setStep(active) {
+    ['extract', 'validate', 'done'].forEach(id => {
+      const el = document.getElementById('step-' + id);
+      el.classList.remove('active', 'done');
+    });
+    const order = ['extract', 'validate', 'done'];
+    const idx = order.indexOf(active);
+    order.forEach((id, i) => {
+      const el = document.getElementById('step-' + id);
+      if (i < idx) el.classList.add('done');
+      else if (i === idx) el.classList.add('active');
+    });
+  }
+
+  // ── Render results ──────────────────────────────────────────────────────
+
+  function renderResults(data) {
+    const { bol, telemetry, mode } = data;
+    const verdict = telemetry.verdict;
+
+    const icons = { CLEAR: '✅', REVIEW: '⚠️', BLOCKED: '🚨' };
+    const labels = { CLEAR: 'CLEAR — Document verified', REVIEW: 'NEEDS REVIEW', BLOCKED: 'BLOCKED — Fraud indicators detected' };
+
+    const scoreColor = verdict === 'CLEAR' ? 'var(--clear)' : verdict === 'REVIEW' ? 'var(--review)' : 'var(--blocked)';
+    const score = (telemetry.risk_score * 100).toFixed(0);
+
+    let html = `
+      <div class="verdict-banner ${verdict}">
+        <div class="verdict-icon">${icons[verdict]}</div>
+        <div>
+          <div class="verdict-label ${verdict}">${labels[verdict]}</div>
+          <div class="verdict-reason">${escHtml(telemetry.overall_reason)}</div>
+          ${telemetry.vessel_name ? `<div class="verdict-reason" style="margin-top:4px;">
+            Vessel: <strong>${escHtml(telemetry.vessel_name)}</strong>
+            ${telemetry.carrier ? ` &nbsp;·&nbsp; Carrier: <strong>${escHtml(telemetry.carrier)}</strong>` : ''}
+            ${telemetry.dock_date ? ` &nbsp;·&nbsp; Last dock: <strong>${escHtml(telemetry.dock_date)}</strong>` : ''}
+          </div>` : ''}
+        </div>
+        <div class="verdict-score">
+          <span class="score-val" style="color:${scoreColor}">${score}</span>
+          <span class="score-label">Risk %</span>
+        </div>
+      </div>
+
+      <div class="results-grid">
+        <div class="card">
+          <div class="card-title">Extracted BOL Fields</div>
+          ${bolFields(bol)}
+        </div>
+        <div class="card">
+          <div class="card-title">Validation Checks</div>
+          ${checkItems(telemetry.checks)}
+        </div>
+      </div>
+
+      <p class="mode-note">
+        AIS source: <strong>${mode === 'live' ? 'MarineTraffic live API' : 'Mock registry (demo mode)'}</strong>
+        &nbsp;·&nbsp; Telemetry source: <strong>${escHtml(telemetry.source || '—')}</strong>
+      </p>
+    `;
+
+    results.innerHTML = html;
+    results.classList.add('visible');
+  }
+
+  const BOL_FIELD_LABELS = {
+    bol_number:         'BOL No.',
+    vessel_name:        'Vessel',
+    mmsi:               'MMSI',
+    imo:                'IMO',
+    voyage_number:      'Voyage No.',
+    port_of_loading:    'Port of Loading',
+    port_of_discharge:  'Port of Discharge',
+    bol_date:           'BOL Date',
+    cargo_description:  'Cargo',
+    cargo_quantity_mt:  'Quantity (MT)',
+    shipper:            'Shipper',
+    consignee:          'Consignee',
+    notify_party:       'Notify Party',
+  };
+
+  function bolFields(bol) {
+    return Object.entries(BOL_FIELD_LABELS).map(([key, label]) => {
+      const val = bol[key];
+      const display = (val !== null && val !== undefined && val !== '')
+        ? escHtml(String(val))
+        : '<span class="missing">not found</span>';
+      return `<div class="field-row">
+        <span class="field-key">${label}</span>
+        <span class="field-val">${display}</span>
+      </div>`;
+    }).join('');
+  }
+
+  function checkItems(checks) {
+    if (!checks || checks.length === 0) {
+      return '<p style="color:var(--muted);font-size:13px;">No checks run.</p>';
+    }
+    const icons = { PASS: '✅', WARN: '⚠️', FAIL: '❌' };
+    return checks.map(c => `
+      <div class="check-item">
+        <span class="check-icon">${icons[c.status] || '—'}</span>
+        <div>
+          <span class="check-field">${escHtml(c.field)}</span>
+          <div class="check-detail">${escHtml(c.detail)}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // ── Reset ───────────────────────────────────────────────────────────────
+
+  resetBtn.addEventListener('click', () => {
+    selectedFile = null;
+    fileInput.value = '';
+    previewImg.src = '';
+    preview.classList.remove('visible');
+    results.innerHTML = '';
+    results.classList.remove('visible');
+    steps.classList.remove('visible');
+    resetBtn.classList.remove('visible');
+    resetScanBtn();
+  });
+
+  // ── Util ─────────────────────────────────────────────────────────────────
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+</script>
+</body>
+</html>

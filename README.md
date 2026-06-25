@@ -1,120 +1,242 @@
-# Smart Invoice Parser
+# SmartInvoiceAI — Physical Telemetry Validation Engine
 
+A maritime logistics invoice fraud detection system that combines AI-powered document extraction with a physical reality check layer. While standard tools validate *document structure*, this system validates *whether the physical event actually happened* — cross-referencing invoice logistics identifiers against live AIS vessel tracking data.
 
-A cutting-edge multilingual invoice parsing application with advanced features like fraud detection, anomaly identification using Isolation Forest, and interactive data visualization.
+Built as a graduation project extension on top of the open-source SmartInvoiceAI parser.
+
 [![Try Live Demo](https://img.shields.io/badge/🚀_Try_Live_Demo-Click_Here-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://smartinvoiceai.streamlit.app/)
 
-*No login required • Process sample invoices in seconds ⏱️*
+---
 
+## What It Does
 
-##  Features
+Maritime logistics invoices are a prime target for **Vendor Email Compromise (VEC)** fraud. An attacker compromises a vendor's email, monitors active payment threads, and injects a fraudulent invoice — structurally identical to the real one, with only the IBAN (bank account number) swapped. Document-level tools return no anomalies because the document *is* clean.
 
-- **Multilingual Support**: Parse invoices in English, Spanish, French, German, and more
-- **AI-Powered Extraction**: Utilizes LLaMA-4 for highly accurate data extraction
-- **Fraud Detection**: Advanced rules-based system to flag suspicious invoices
-- **Anomaly Detection**: Isolation Forest ML algorithm to identify unusual patterns
-- **Interactive UI**: Beautiful Streamlit interface with dark/light mode
-- **Batch Processing**: Handle multiple invoices simultaneously
-- **Data Export**: Export to CSV or JSON with one click
-- **Chat Assistant**: Get insights about your invoices through natural language
+This system catches the fraud at two layers:
 
+**Layer 1 — Email Header Analysis**
+Before the invoice is even opened, the email carrying it is parsed for VEC indicators:
+- Reply-to domain differs from sender domain (primary attack pattern)
+- Sender using a consumer email provider (Gmail, Yahoo) while claiming to be a shipping company
+- Urgency / payment-redirect language in the subject line
 
+**Layer 2 — Physical Telemetry Validation**
+After extraction, the invoice's logistics claims are verified against AIS vessel data:
+- Did the vessel actually dock at the claimed port? (verified via MarineTraffic AIS)
+- Is the invoice date consistent with the dock date? (Skuld Case A — post/ante-dating)
+- Is the cargo physically compatible with this vessel type? (Skuld Case B — tanker can't carry grain)
+- Has this voyage already been invoiced? (Skuld Case B — ghost cargo / duplicate sale)
+- Does the claimed cargo tonnage fit within vessel capacity? (Skuld Case C — DWT overstatement)
+- Was the invoice submitted suspiciously late? (Skuld Case D — fake agency invoice)
+- Does the IBAN match the registered carrier bank account? (VEC financial payload)
 
+> "If the ship didn't dock, the payment doesn't clear."
 
-##  Tech Stack
+---
+
+## Features
+
+- **BOL scanner web app** — standalone FastAPI app: drag-drop a Bill of Lading image, get an instant authenticity verdict
+- **5-tab Streamlit dashboard** — extraction, chatbot, fraud detection, telemetry validation, email ingestion
+- **LLaMA-4 Scout extraction** — vision-capable LLM via Groq API; multilingual (8+ languages); BOL-specific prompt extracts vessel, ports, cargo, tonnage
+- **Isolation Forest anomaly detection** — unsupervised ML on invoice amount patterns
+- **Skuld Cases A–D** — four maritime fraud patterns from P&I Club case files
+- **VEC email detection** — `.eml` parser with header forensics and attachment extraction
+- **MarineTraffic AIS integration** — live port call verification; graceful fallback to mock registry
+- **Three-way verdict** — CLEAR / REVIEW (API unavailable) / BLOCKED with per-field breakdown and risk score
+- **10 built-in demo scenarios** in the Telemetry tab covering every fraud case
+- **Batch invoice processing** — multi-upload with per-image progress tracking
+- **Data export** — CSV and JSON with one click
+- **Chatbot** — natural language queries over extracted invoice data
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Streamlit dashboard | Streamlit |
+| BOL scanner web app | FastAPI + Uvicorn + vanilla HTML/CSS/JS |
+| LLM extraction | LLaMA-4 Scout via Groq API |
+| Anomaly detection | Isolation Forest (scikit-learn) |
+| Data validation | Pydantic v2 |
+| Email parsing | Python `email` stdlib (RFC 2822 / MIME) |
+| HTTP client | `requests` |
+| Live AIS data | MarineTraffic REST API — `GET /portcalls/{api_key}` |
+| Mock AIS data | `maritime_registry.json` (3 vessels, MMSI-keyed) |
+| Language | Python 3.10+ |
+| Configuration | `.streamlit/secrets.toml` |
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python)
 ![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?logo=streamlit)
-![LLaMA-4](https://img.shields.io/badge/LLaMA--4-FF6F00?logo=meta)
-![Groq](https://img.shields.io/badge/Groq-00A98F?logo=groq)
-![Isolation Forest](https://img.shields.io/badge/Isolation_Forest-ML_Algorithm-green)
-![Pandas](https://img.shields.io/badge/Pandas-150458?logo=pandas)
-![Plotly](https://img.shields.io/badge/Plotly-3F4F75?logo=plotly)
+![LLaMA-4](https://img.shields.io/badge/LLaMA--4_Scout-FF6F00?logo=meta)
+![Groq](https://img.shields.io/badge/Groq-00A98F)
+![Pydantic](https://img.shields.io/badge/Pydantic-E92063?logo=pydantic)
 
+---
 
-### Key Directories Explained:
+## How It Works
 
-1. **`.Dataset/`**  
-   ![Dataset Icon](https://img.icons8.com/color/48/000000/database.png)  
-   Curated collection of sample invoices in multiple languages and formats for testing and development.
+### 1. Email Ingestion (Tab 5)
 
-2. **`.streamlit/`**  
-   ![Config Icon](https://img.icons8.com/color/48/000000/settings.png)  
-   Contains environment configurations including:
-   - API keys (secured via `secrets.toml`)
-   - UI theme settings
-   - Performance configurations
+Upload a `.eml` file or select a demo scenario. The system parses the email headers without opening any attachment:
 
-3. **`Results/`**  
-   ![Results Icon](https://img.icons8.com/color/48/000000/data-configuration.png)  
-   Organized outputs including:
-   - Structured JSON/CSV exports
-   - Fraud detection reports
-   - Interactive visualizations
-
-4. **Core Modules**  
-   ![Python Icon](https://img.icons8.com/color/48/000000/python.png)  
-   - `analytics.py`: ML-powered anomaly detection
-   - `app.py`: Main processing pipeline
-   - `enhanced_ui.py`: Interactive dashboard components
-
-##  How It Works
-
-### 1. Intelligent Invoice Parsing Pipeline
-
-![image](https://github.com/user-attachments/assets/2b213cc7-2ecc-403c-a979-d72e846aefbc)
-
-Our system follows a sophisticated multi-stage process:
-
-1. **Image Preprocessing**: Enhances contrast and resizes images for optimal OCR accuracy
-2. **LLaMA-4 Extraction**: Uses advanced vision capabilities to extract structured data
-3. **Type Detection**: Classifies invoices as retail, service, utility, or general
-4. **Confidence Scoring**: Provides confidence levels for each extracted field
-5. **Validation**: Cross-checks calculated totals against extracted values
-
-### 2. Anomaly Detection with Isolation Forest
-
-We employ this powerful unsupervised learning algorithm to identify unusual invoice patterns:
-
-```python
-from sklearn.ensemble import IsolationForest
-
-# Prepare features for anomaly detection
-features = df[['total_amount', 'tax', 'subtotal']].dropna()
-
-# Train Isolation Forest model
-clf = IsolationForest(contamination=0.05, random_state=42)
-clf.fit(features)
-
-# Predict anomalies
-df['anomaly_score'] = clf.decision_function(features)
-df['is_anomaly'] = clf.predict(features)
+```
+From: "Atlantic Shipping BV" <billing@atlantlc-shipping.com>
+Reply-To: urgent.payments@gmail.com
+Subject: URGENT: Updated Banking Details — Invoice INV-2026-441 ACTION REQUIRED
 ```
 
-Key advantages:
-- Effectively handles high-dimensional data
-- No need for labeled anomaly data
-- Identifies both global and local outliers
-- Computationally efficient
+Flags raised:
+- 🚨 **HIGH** — Reply-to domain (`gmail.com`) differs from sender domain (`atlantlc-shipping.com`)
+- ⚠️ **MEDIUM** — Reply-to is a consumer email provider
+- 🔶 **LOW** — Subject contains urgency keywords: `"urgent"`, `"action required"`
 
-### 3. Fraud Detection System
+Image/PDF attachments are extracted and can be passed directly into the extraction pipeline.
 
-Our multi-layered fraud detection combines:
+---
 
-- **Rule-based checks**: Duplicate invoices, unusual amounts
-- **Statistical analysis**: Z-score based outlier detection
-- **ML-powered insights**: Isolation Forest anomalies
-- **Pattern recognition**: Vendor-specific behavior analysis
+### 2. Invoice Extraction (Tab 1)
 
-##  UI Showcase
+Images or PDF pages are preprocessed (contrast enhancement, resize) then sent to LLaMA-4 Scout for structured extraction:
 
-| Feature | Screenshot |
-|---------|------------|
-| **Main Interface** | ![image](https://github.com/user-attachments/assets/2e8c9582-ff0c-4790-817f-95298c7d43f2)|
-| **Fraud Detection** |![Screenshot 2025-06-03 231430](https://github.com/user-attachments/assets/c9531a28-631a-46b8-9574-ae2e7d02c00f)|
-| **Chat Assistant** |![image](https://github.com/user-attachments/assets/11de9800-101e-4099-bf3c-b81815efbc83)|
+```python
+# Extracted InvoiceData (Pydantic model)
+{
+  "invoice_number": "INV-2026-441",
+  "invoice_date": "2026-06-20",
+  "vendor_name": "Atlantic Shipping BV",
+  "total_amount": 42500.0,
+  "currency": "EUR",
+  ...
+}
+```
 
-##  Installation
+Isolation Forest runs across the batch to score each invoice against the distribution of amounts, taxes, and subtotals.
+
+---
+
+### 3. Telemetry Validation (Tab 4)
+
+The extracted invoice's logistics identifiers are submitted to the validation engine:
+
+```python
+payload = {
+    "mmsi": "244170218",            # 9-digit vessel identifier (primary key)
+    "discharge_port": "Port of Rotterdam",
+    "invoice_date": "2026-06-20",
+    "submission_date": "2026-06-23",
+    "iban": "GB29NWBK60161331926819",   # attacker's IBAN
+    "cargo_type": "grain",
+    "voyage_id": "VOY-2026-999",
+    "cargo_quantity_mt": 15000,
+}
+result = telemetry_context_validation(payload, marinetraffic_api_key=api_key)
+```
+
+Result:
+```
+BLOCKED — IBAN on invoice does not match registered carrier IBAN. Possible account hijack.
+Risk score: 1.0
+
+Checks:
+  ✅ discharge_port — Port confirmed: 'Port of Rotterdam'
+  ✅ cargo_type — Compatible with container vessel
+  ✅ voyage_id — Not previously invoiced
+  ❌ iban — IBAN mismatch. Registered: NL91ABNA0417164300
+```
+
+**API mode:** with a MarineTraffic key, port verification hits the live `/portcalls` endpoint with a ±14-day window around the invoice date. On timeout or API error, the system silently falls back to the local registry — no false positives from network issues.
+
+**Mock mode:** no API key required; all checks use `maritime_registry.json`.
+
+---
+
+### 4. BOL Scanner Web App
+
+A focused, standalone web interface for scanning a single Bill of Lading image — no login, no setup beyond running the server.
+
+```
+Upload BOL image (JPEG / PNG / WebP)
+        ↓
+LLaMA-4 Scout extracts: vessel name, MMSI, IMO, voyage number,
+  port of loading, port of discharge, BOL date,
+  cargo description, tonnage, shipper, consignee
+        ↓
+Cargo description → type mapping
+  e.g. "bulk wheat" → grain  |  "crude petroleum" → crude_oil
+        ↓
+telemetry_context_validation() — same engine as the Streamlit app
+        ↓
+Verdict rendered in browser:
+  ✅ CLEAR     — physical event confirmed
+  ⚠️ REVIEW    — API unavailable or vessel not identified
+  🚨 BLOCKED   — fraud indicator detected + field breakdown
+```
+
+**Run the BOL scanner:**
+```bash
+uvicorn bol_scanner_app:app --reload --port 8502
+# open http://localhost:8502
+```
+
+---
+
+### 5. Fraud Patterns Detected
+
+Based on Skuld P&I Club maritime fraud case files:
+
+| Case | Pattern | Signal |
+|---|---|---|
+| A | Forged Bill of Lading | Invoice date vs AIS dock date > ±2 days |
+| B | Ghost cargo / duplicate sale | Voyage ID already invoiced; or cargo type incompatible with vessel type |
+| C | DWT overstatement | Cargo quantity exceeds vessel deadweight tonnage |
+| D | Fake agency invoice | Invoice submitted >14 days after vessel departure |
+| VEC | IBAN hijack | Invoice IBAN ≠ registered carrier IBAN |
+
+---
+
+## Demo Scenarios
+
+The Telemetry Validation tab has 10 built-in scenarios. Key examples:
+
+| Scenario | MMSI | Details | Verdict |
+|---|---|---|---|
+| CLEAR | 244170218 | Rotterdam · correct IBAN | CLEAR |
+| Port mismatch | 244170218 | Claims Port of Antwerp | BLOCKED |
+| Unknown vessel | 999999999 | Not in registry | BLOCKED |
+| IBAN hijack | 244170218 | Attacker's IBAN substituted | BLOCKED |
+| Duplicate voyage (Case B) | 244170218 | VOY-2026-441 already invoiced | BLOCKED |
+| Tanker + grain cargo (Case B) | 224143870 | Tanker invoiced for bulk grain | BLOCKED |
+| DWT exceeded (Case C) | 211456200 | Claims 50,000 MT, vessel max 45,000 | BLOCKED |
+| Late submission (Case D) | 211456200 | Invoice 20 days after dock date | BLOCKED |
+
+---
+
+## Project Structure
+
+```
+SmartInvoiceAI/
+├── enhanced_ui.py          # 5-tab Streamlit dashboard
+├── bol_scanner_app.py      # FastAPI BOL authenticity scanner (standalone web app)
+├── templates/
+│   └── bol_index.html      # BOL scanner frontend — single-file, no build step
+├── telemetry_validator.py  # Shared validation engine (used by both apps)
+├── email_ingestor.py       # VEC email header analysis + attachment extraction
+├── utils.py                # Pydantic models, Groq client, image helpers
+├── analytics.py            # Isolation Forest anomaly detection
+├── app.py                  # Single-invoice baseline app (original SmartInvoiceAI)
+├── maritime_registry.json  # Mock AIS registry — 3 vessels keyed by MMSI
+├── requirements.txt
+├── .streamlit/
+│   └── secrets.toml        # GROQ_API_KEY, MARINETRAFFIC_API_KEY
+├── .Dataset/               # Sample invoices in multiple languages
+└── Results/                # JSON/CSV exports, fraud reports
+```
+
+---
+
+## Installation
 
 1. Clone the repository:
    ```bash
@@ -127,89 +249,87 @@ Our multi-layered fraud detection combines:
    pip install -r requirements.txt
    ```
 
-3. Set up your Groq API key:
-   - Create a `.streamlit/secrets.toml` file with:
-     ```toml
-     GROQ_API_KEY = "your_api_key_here"
-     ```
-
-4. Run the application:
-   ```bash
-   streamlit run app.py
+3. Configure API keys in `.streamlit/secrets.toml`:
+   ```toml
+   GROQ_API_KEY = "your_groq_api_key"
+   MARINETRAFFIC_API_KEY = "your_mt_api_key"   # optional — omit for mock mode
    ```
 
-##  Performance Metrics
+4. Run the apps:
 
-| Metric | Value |
-|--------|-------|
-| Extraction Accuracy | 92.7% |
-| Fraud Detection Precision | 89.3% |
-| Anomaly Detection Recall | 85.6% |
-| Average Processing Time | 3.2s/invoice |
-| Multilingual Support | 8 languages |
+   **Streamlit dashboard** (full 5-tab suite):
+   ```bash
+   streamlit run enhanced_ui.py
+   ```
 
-##  Chatbot Examples
+   **BOL scanner web app** (standalone):
+   ```bash
+   uvicorn bol_scanner_app:app --reload --port 8502
+   # open http://localhost:8502
+   ```
 
-**User**: "Which invoice has the highest total?"  
-**Bot**: "Invoice #INV-7892 has the highest total of $12,450.00 dated 2023-11-15 from VendorTech Solutions."
-
-**User**: "Are there any duplicate invoice numbers?"  
-**Bot**: "Yes, invoice number INV-5421 appears 3 times from different vendors. This might indicate fraud."
-
-##  Advanced Analytics
-
-Our system provides powerful insights through:
-
-- Temporal analysis of invoice patterns
-- Vendor spend analysis
-- Tax compliance monitoring
-- Cash flow forecasting
-- Budget vs. actual comparisons
-
-##  Multilingual Support
-
-The application seamlessly handles invoices in multiple languages:
-
-| Language | Sample Output |
-|----------|---------------|
-| Tamil | ![image](https://github.com/user-attachments/assets/90c73647-7f96-4605-98c1-60cf98fb1a3f)|
-| French | ![image](https://github.com/user-attachments/assets/805aafeb-2d7b-4766-bb5a-c02f20c55db8)|
-
-##  Fraud Detection Rules
-
-1. **Duplicate Invoice Numbers**: Same number across different vendors
-2. **Round Amounts**: Excessive rounding of totals (e.g., $10,000.00)
-3. **After-Hours Invoices**: Invoices dated outside business hours
-4. **Rapid Succession**: Multiple invoices from same vendor in short time
-5. **Amount Discrepancies**: Large differences between subtotal and total
-
-##  Future Enhancements
-
-- [ ] Vendor reputation scoring system
-- [ ] Blockchain-based invoice verification
-- [ ] Predictive analytics for payment delays
-- [ ] Automated approval workflows
-- [ ] Mobile app with camera integration
-
-## 🤝 Contributing
-
-We welcome contributions! Please follow these steps:
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-##  License
-
-Distributed under the MIT License. See `LICENSE` for more information.
-
-## 📧 Contact
-
-Project Lead: Janani N  
-Project Link: https://smartinvoiceai.streamlit.app/
+Both apps read from the same `secrets.toml`. Without a MarineTraffic key, all telemetry checks use the local `maritime_registry.json` — all demo scenarios work fully offline.
 
 ---
 
-✨ **Transform your invoice processing from chore to strategic advantage with AI-powered insights!** ✨
+## UI
+
+| Tab | Screenshot |
+|---|---|
+| **Main Interface** | ![image](https://github.com/user-attachments/assets/2e8c9582-ff0c-4790-817f-95298c7d43f2) |
+| **Fraud Detection** | ![Screenshot 2025-06-03 231430](https://github.com/user-attachments/assets/c9531a28-631a-46b8-9574-ae2e7d02c00f) |
+| **Chat Assistant** | ![image](https://github.com/user-attachments/assets/11de9800-101e-4099-bf3c-b81815efbc83) |
+
+---
+
+## Performance
+
+| Metric | Value |
+|---|---|
+| Extraction accuracy | 92.7% |
+| Fraud detection precision | 89.3% |
+| Anomaly detection recall | 85.6% |
+| Average processing time | 3.2 s/invoice |
+| Multilingual support | 8 languages |
+
+---
+
+## Fraud Detection Rules (Tab 3)
+
+In addition to telemetry validation, Tab 3 applies document-level rules:
+
+1. **Duplicate invoice numbers** — same number across different vendors
+2. **Round amounts** — excessive rounding (e.g. $10,000.00 exactly)
+3. **After-hours invoices** — dated outside normal business hours
+4. **Rapid succession** — multiple invoices from same vendor within a short window
+5. **Amount discrepancies** — large gap between subtotal and total
+
+---
+
+## Roadmap
+
+- [x] Port of discharge verification via MarineTraffic AIS
+- [x] IBAN cross-check vs registered carrier
+- [x] Skuld Case A — invoice date vs dock date
+- [x] Skuld Case B — vessel type / cargo incompatibility + voyage duplicate
+- [x] Skuld Case C — DWT capacity overstatement
+- [x] Skuld Case D — late agency invoice submission
+- [x] VEC email header analysis (reply-to mismatch, impersonation, urgency keywords)
+- [x] Three-way verdict: CLEAR / REVIEW / BLOCKED
+- [x] BOL scanner web app — FastAPI + drag-drop frontend, LLaMA BOL extraction, cargo type mapping
+- [ ] Auto-extract MMSI, voyage ID, and port from invoice image via LLaMA (Streamlit tab auto-fill)
+- [ ] Live IBAN verification via Open Banking / SWIFT gpi
+- [ ] IMAP listener — automatic processing on accounts payable inbox
+- [ ] REST API plugin for Odoo / ERPNext / QuickBooks
+- [ ] Multi-source AIS: AISHub + port authority records
+
+---
+
+## License
+
+Distributed under the MIT License.
+
+## Contact
+
+Project Lead: Janani N  
+Live Demo: https://smartinvoiceai.streamlit.app/

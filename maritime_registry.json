@@ -1,0 +1,41 @@
+{
+  "244170218": {
+    "vessel_id": "VESS-9982",
+    "vessel_name": "Atlantic Explorer",
+    "mmsi": "244170218",
+    "imo": "9320001",
+    "vessel_type": "container",
+    "deadweight_tonnes": 18000,
+    "last_docked_port": "Port of Rotterdam",
+    "dock_date": "2026-06-20",
+    "registered_iban": "NL91ABNA0417164300",
+    "carrier": "Atlantic Shipping BV",
+    "invoiced_voyages": ["VOY-2026-441", "VOY-2026-398"]
+  },
+  "211456200": {
+    "vessel_id": "VESS-4471",
+    "vessel_name": "Baltic Carrier",
+    "mmsi": "211456200",
+    "imo": "9201234",
+    "vessel_type": "bulk_carrier",
+    "deadweight_tonnes": 45000,
+    "last_docked_port": "Port of Hamburg",
+    "dock_date": "2026-06-18",
+    "registered_iban": "DE89370400440532013000",
+    "carrier": "Nordic Freight GmbH",
+    "invoiced_voyages": []
+  },
+  "224143870": {
+    "vessel_id": "VESS-7730",
+    "vessel_name": "Mediterranean Star",
+    "mmsi": "224143870",
+    "imo": "9456789",
+    "vessel_type": "tanker",
+    "deadweight_tonnes": 25000,
+    "last_docked_port": "Port of Barcelona",
+    "dock_date": "2026-06-22",
+    "registered_iban": "ES9121000418450200051332",
+    "carrier": "Iberian Cargo SL",
+    "invoiced_voyages": []
+  }
+}

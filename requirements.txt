@@ -1,3 +1,8 @@
 groq
 streamlit
 python-dotenv
+requests
+pillow
+fastapi
+uvicorn[standard]
+python-multipart
