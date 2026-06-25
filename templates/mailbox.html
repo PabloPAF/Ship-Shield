@@ -57,11 +57,10 @@
   .rbody{padding:18px 24px; overflow:auto; flex:1; line-height:1.55;}
   .rbody p{margin-bottom:10px;}
   .checkbtnrow{padding:10px 24px; border-bottom:1px solid var(--ms-line); display:flex; gap:10px; align-items:center; background:#fbfbfa;}
-  .ssbtn{background:var(--ms-blue); color:#fff; border:none; border-radius:4px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px; font-family:inherit;}
-  .ssbtn:hover{background:var(--ms-blue-dark);} .ssbtn:disabled{opacity:.6; cursor:default;}
-  .ssbtn .blogo{height:22px; width:22px; object-fit:contain; background:#fff; border-radius:5px; padding:1px;}
+  .ssbtn{background:#e1dfdd; color:var(--ms-dark); border:1px solid #c8c6c4; border-radius:4px; padding:6px 14px; font-size:13px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:9px; font-family:inherit;}
+  .ssbtn:hover{background:#d2d0ce;} .ssbtn:disabled{opacity:.6; cursor:default;}
+  .ssbtn .blogo{height:30px; width:30px; object-fit:contain;}
   .phead .plogo{height:30px; width:30px; object-fit:contain;}
-  .btnhint{color:var(--ms-grey); font-size:12px;}
   .attach{border:1px solid var(--ms-line); border-radius:6px; margin:8px 0 16px; max-width:560px; overflow:hidden;}
   .attach .ahead{display:flex; align-items:center; gap:10px; padding:10px 12px; background:#faf9f8; border-bottom:1px solid var(--ms-line);}
   .attach .aico{width:30px; height:30px; border-radius:4px; background:#d13438; color:#fff; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700;}
@@ -104,7 +103,7 @@
   .vesselcard div{margin:2px 0;} .vesselcard b{color:var(--ms-dark);}
   .src{font-size:11px; color:var(--ms-grey2); margin-top:12px; font-style:italic;}
   .overlay{position:fixed; inset:0; background:rgba(0,0,0,.25); z-index:40; display:none;} .overlay.show{display:block;}
-  .spin{display:inline-block; width:14px; height:14px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:sp .7s linear infinite;}
+  .spin{display:inline-block; width:14px; height:14px; border:2px solid rgba(0,0,0,.2); border-top-color:var(--ms-blue); border-radius:50%; animation:sp .7s linear infinite;}
   @keyframes sp{to{transform:rotate(360deg);}}
   .loading{padding:40px; text-align:center; color:var(--ms-grey);}
 </style>
@@ -187,8 +186,7 @@ function openEmail(id){
     <div class="senderrow"><div class="av" style="background:${e.color}">${initials(e.from)}</div>
     <div><div class="sname">${senderName(e.from)}</div><div class="saddr">&lt;${addrOnly(e.from)}&gt;</div></div>
     <div class="meta">${e.date}<div class="torow">To: ${e.to}</div>${replyRow}</div></div></div>
-    <div class="checkbtnrow"><button class="ssbtn" id="ssbtn" onclick="runCheck('${e.id}')"><img class="blogo" src="/logo/shipshield_emblem.png" alt="Ship-Shield"> Ship-Shield</button>
-    <span class="btnhint">Verify this invoice against live vessel telemetry &amp; sender headers</span></div>
+    <div class="checkbtnrow"><button class="ssbtn" id="ssbtn" onclick="runCheck('${e.id}')"><img class="blogo" src="/logo/shipshield_emblem.png" alt="Ship-Shield"> Ship-Shield</button></div>
     <div class="rbody">${bodyHtml}${invoiceHTML(e.invoice)}</div>`;
 }
 async function runCheck(id){
