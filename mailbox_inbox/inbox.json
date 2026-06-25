@@ -500,5 +500,50 @@
       "voyage_id": "VOY-2026-2002",
       "cargo_quantity_mt": 12000
     }
+  },
+  {
+    "id": "sanctioned",
+    "file": "12_sanctioned_vessel.eml",
+    "color": "#a4262c",
+    "unread": true,
+    "time": "Mon 07:30",
+    "from": "billing@volga-maritime.example",
+    "reply_to": null,
+    "to": "ap@acme-logistics.com",
+    "subject": "Invoice INV-2026-3001 - Crimson Star - Port of Rotterdam",
+    "date": "Mon, 22 Jun 2026 07:30:00 +0100",
+    "body": "Dear Accounts Payable,\n\nPlease find attached invoice INV-2026-3001 for container discharge at Port of Rotterdam on 2026-06-22.\nVessel: Crimson Star (MMSI 273345000) - Voyage VOY-2026-3001.\n\nVolga Maritime OOO - Billing\n",
+    "doc_type": "invoice",
+    "invoice": {
+      "number": "INV-2026-3001",
+      "vendor": "Volga Maritime OOO",
+      "vessel": "Crimson Star",
+      "mmsi": "273345000",
+      "port": "Port of Rotterdam",
+      "date": "2026-06-22",
+      "currency": "EUR",
+      "total": "45,000.00",
+      "items": [
+        [
+          "Ocean freight - Rotterdam discharge",
+          "EUR 41,000.00"
+        ],
+        [
+          "THC & documentation",
+          "EUR 4,000.00"
+        ]
+      ],
+      "iban": "NL55 INGB 0000 0007 77"
+    },
+    "payload": {
+      "mmsi": "273345000",
+      "discharge_port": "Port of Rotterdam",
+      "invoice_date": "2026-06-22",
+      "submission_date": "2026-06-23",
+      "iban": "NL55INGB0000000777",
+      "cargo_type": "container",
+      "voyage_id": "VOY-2026-3001",
+      "cargo_quantity_mt": 15000
+    }
   }
 ]

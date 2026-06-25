@@ -37,5 +37,18 @@
     "registered_iban": "ES9121000418450200051332",
     "carrier": "Iberian Cargo SL",
     "invoiced_voyages": []
+  },
+  "273345000": {
+    "vessel_id": "VESS-3345",
+    "vessel_name": "Crimson Star",
+    "mmsi": "273345000",
+    "imo": "9700777",
+    "vessel_type": "container",
+    "deadweight_tonnes": 20000,
+    "last_docked_port": "Port of Rotterdam",
+    "dock_date": "2026-06-22",
+    "registered_iban": "NL55INGB0000000777",
+    "carrier": "Volga Maritime OOO",
+    "invoiced_voyages": []
   }
 }

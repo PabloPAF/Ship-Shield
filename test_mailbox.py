@@ -33,6 +33,7 @@ EXPECTED_VERDICT = {
     "bol_clean": "CLEAR",   # Bill of Lading — Baltic Carrier / Hamburg, all matches
     "bol_forged": "BLOCKED",# Bill of Lading — claims Felixstowe, registry says Rotterdam
     "hygiene": "BLOCKED",   # clean invoice, but the attached PDF carries active content (Layer 0)
+    "sanctioned": "BLOCKED",# clean telemetry, but vessel/carrier is sanctioned (Layer 4)
 }
 
 # The single telemetry check expected to FAIL for each fraud scenario.
@@ -63,7 +64,7 @@ def test_inbox_manifest_has_all_emails():
     r = client.get("/mailbox/emails")
     assert r.status_code == 200
     emails = r.json()
-    assert len(emails) == 11
+    assert len(emails) == 12
     assert {e["id"] for e in emails} == set(EXPECTED_VERDICT)
     for e in emails:
         assert e["invoice"]["number"]
@@ -110,6 +111,23 @@ def test_clean_emails_pass_all_checks():
 
 def test_unknown_email_id_returns_404():
     assert client.post("/mailbox/check", json={"id": "does-not-exist"}).status_code == 404
+
+
+# ── Layer 4: sanctions / dark-fleet screening ───────────────────────────────
+
+def _counterparty(data, field):
+    return next((c for c in data.get("counterparty", []) if c["field"] == field), None)
+
+def test_sanctioned_vessel_blocked():
+    data = client.post("/mailbox/check", json={"id": "sanctioned"}).json()
+    s = _counterparty(data, "sanctions")
+    assert s and s["status"] == "FAIL"
+    assert data["verdict"] == "BLOCKED"
+
+def test_clean_emails_pass_sanctions():
+    for eid in ("clean1", "clean2", "bol_clean"):
+        s = _counterparty(client.post("/mailbox/check", json={"id": eid}).json(), "sanctions")
+        assert s and s["status"] == "PASS"
 
 
 # ── Layer 0: document hygiene (active/hidden content in attachments) ─────────

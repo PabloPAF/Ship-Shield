@@ -30,6 +30,7 @@ from telemetry_validator import telemetry_context_validation
 from email_ingestor import ingest_eml
 from vendor_ledger import check_vendor_iban
 from document_hygiene import scan_attachments
+from sanctions_screen import screen_counterparty
 import email_forensics
 
 # ── Constants ──────────────────────────────────────────────────────────────
@@ -275,6 +276,20 @@ async def mailbox_check(req: CheckRequest):
     bank = check_vendor_iban(entry.get("invoice", {}).get("vendor", ""),
                              entry["payload"].get("iban", ""))
 
+    # Layer 4 — counterparty screening (sanctions / dark fleet).
+    iban_country = entry["payload"].get("iban", "")[:2].upper()
+    counterparty = []
+    sanctions = screen_counterparty(
+        vendor=entry.get("invoice", {}).get("vendor", ""),
+        carrier=telemetry.get("carrier", "") or "",
+        vessel_name=telemetry.get("vessel_name", "") or "",
+        imo=entry["payload"].get("imo", ""),
+        mmsi=entry["payload"].get("mmsi", ""),
+        iban_country=iban_country,
+        sanctions_api_key=_read_secret("SANCTIONS_API_KEY"),
+    )
+    counterparty.append(sanctions)
+
     # Combined verdict — a HIGH email-header flag or a bank-account change escalates to BLOCKED
     verdict = telemetry.get("verdict", "REVIEW")
     risk = float(telemetry.get("risk_score", 0.0))
@@ -298,12 +313,20 @@ async def mailbox_check(req: CheckRequest):
         elif hygiene["status"] == "WARN" and verdict == "CLEAR":
             verdict = "REVIEW"
             risk = max(risk, 0.3)
+    for c in counterparty:
+        if c["status"] == "FAIL":
+            verdict = "BLOCKED"
+            risk = max(risk, float(c.get("risk", 1.0)))
+        elif c["status"] == "WARN" and verdict == "CLEAR":
+            verdict = "REVIEW"
+            risk = max(risk, 0.3)
 
     return JSONResponse({
         "id": entry["id"],
         "verdict": verdict,
         "hygiene": hygiene,
         "bank": bank,
+        "counterparty": counterparty,
         "risk_score": round(risk, 2),
         "vec": vec,
         "telemetry": telemetry,

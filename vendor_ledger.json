@@ -31,5 +31,16 @@
         "last_seen": "2026-06-25"
       }
     }
+  },
+  "volga maritime ooo": {
+    "display_name": "Volga Maritime OOO",
+    "ibans": {
+      "bb6cf592bad552f9072c49e0c45c404684f29fff942403003ee9c642dd505149": {
+        "confirmed": true,
+        "country": "NL",
+        "first_seen": "2026-06-25",
+        "last_seen": "2026-06-25"
+      }
+    }
   }
 }

@@ -236,6 +236,10 @@ function showPanel(e,d){
   const hygHtml=d.hygiene?`<div class="seg">Layer 0 — Document hygiene</div>
       <div class="check"><span class="st ${d.hygiene.status}">${d.hygiene.status}</span>
       <div><div class="cf">attachment_scan</div><div class="cd">${d.hygiene.detail}</div></div></div>`:"";
+  const cp=(d.counterparty||[]);
+  const cpHtml=cp.length?`<div class="seg">Layer 4 — Counterparty &amp; sanctions</div>`+
+      cp.map(c=>`<div class="check"><span class="st ${c.status}">${c.status}</span>
+      <div><div class="cf">${c.field}</div><div class="cd">${c.detail}</div></div></div>`).join(""):"";
   const vessel=tel.vessel_name?`<div class="vesselcard"><div><b>${tel.vessel_name}</b> · ${tel.carrier}</div>
       <div>MMSI ${e.payload.mmsi} · last AIS dock: <b>${tel.dock_date}</b></div></div>`:"";
   document.getElementById("pbody").innerHTML=`
@@ -248,6 +252,7 @@ function showPanel(e,d){
     <div class="seg">Layer 1 — Email header analysis (VEC)</div>${vecHtml}
     <div class="seg">Layer 2 — Physical telemetry validation</div>${telHtml}
     ${bankHtml}
+    ${cpHtml}
     <div class="src">Source: ${(tel.source||"").replace(/_/g," ")} · ${tel.checks.length} telemetry checks, ${vec.flags.length} header flags · engine: telemetry_validator.py + email_ingestor.py + vendor_ledger.py</div>`;
   document.getElementById("panel").classList.add("open");
   document.getElementById("overlay").classList.add("show");

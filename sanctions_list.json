@@ -1,0 +1,13 @@
+{
+  "_note": "Mock consolidated sanctions data for offline demo. In production this is replaced by a live feed (e.g. OpenSanctions / OFAC SDN / EU consolidated list). Used by sanctions_screen.py when no SANCTIONS_API_KEY is configured.",
+  "source": "mock_consolidated",
+  "entities": [
+    {"name": "Volga Maritime OOO", "programs": ["EU", "OFAC-SDN"], "type": "carrier"},
+    {"name": "Northern Shadow Trading LLC", "programs": ["OFAC-SDN"], "type": "entity"}
+  ],
+  "vessels": [
+    {"imo": "9700777", "name": "Crimson Star", "programs": ["EU"], "reason": "dark-fleet / flag-hopping"},
+    {"imo": "9588888", "name": "Grey Phantom", "programs": ["OFAC-SDN"], "reason": "sanctions evasion"}
+  ],
+  "sanctioned_jurisdictions": ["RU", "KP", "IR", "SY"]
+}
