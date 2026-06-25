@@ -163,8 +163,8 @@ def preprocess_image(image_bytes: bytes) -> bytes:
 # ---------------------------
 
 def setup_page():
-    st.set_page_config(page_title="Invoice OCR with LLaMA 4", layout="wide")
-    st.title("🧾 Smart Invoice Parser")
+    st.set_page_config(page_title="ShipShield — Invoice OCR with LLaMA 4", layout="wide")
+    st.title("🛡 ShipShield — Invoice Parser")
 
 def select_input_method():
     return st.radio("Select input method: 📸", 

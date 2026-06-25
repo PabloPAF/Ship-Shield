@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ShipShield — Accounts Payable Mailbox</title>
+<style>
+  :root{
+    --ms-blue:#0078d4; --ms-blue-dark:#106ebe; --ms-bg:#faf9f8; --ms-line:#edebe9;
+    --ms-grey:#605e5c; --ms-grey2:#a19f9d; --ms-dark:#201f1e;
+    --ok:#107c10; --warn:#c19c00; --bad:#a4262c;
+    --ok-bg:#dff6dd; --warn-bg:#fff4ce; --bad-bg:#fde7e9;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Segoe UI','Segoe UI Web',-apple-system,system-ui,sans-serif; color:var(--ms-dark);
+    background:var(--ms-bg); height:100vh; overflow:hidden; font-size:14px;}
+  .topbar{height:48px; background:var(--ms-blue); color:#fff; display:flex; align-items:center; padding:0 16px; gap:14px; flex-shrink:0;}
+  .topbar .waffle{font-size:18px; opacity:.9;}
+  .topbar .appname{font-weight:600; font-size:16px;}
+  .topbar .search{flex:1; max-width:560px; background:#fff; border-radius:4px; height:32px; display:flex; align-items:center; padding:0 10px; color:var(--ms-grey); font-size:13px;}
+  .topbar .right{margin-left:auto; display:flex; align-items:center; gap:14px;}
+  .topbar a{color:#fff; text-decoration:none; font-size:13px; opacity:.9;}
+  .topbar a:hover{opacity:1; text-decoration:underline;}
+  .topbar .avatar{width:30px; height:30px; border-radius:50%; background:#5c2d91; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:13px;}
+  .app{display:flex; height:calc(100vh - 48px);}
+  .nav{width:200px; background:#f3f2f1; border-right:1px solid var(--ms-line); padding:12px 0; flex-shrink:0; overflow:auto;}
+  .newmail{margin:0 12px 12px; background:#fff; border:1px solid var(--ms-line); border-radius:4px; padding:7px 10px; font-weight:600; color:var(--ms-blue); display:flex; align-items:center; gap:8px;}
+  .folder{padding:7px 12px 7px 16px; display:flex; align-items:center; gap:10px; cursor:pointer; color:var(--ms-dark);}
+  .folder:hover{background:#eae9e8;}
+  .folder.active{background:#e1efff; font-weight:600; border-left:3px solid var(--ms-blue); padding-left:13px;}
+  .folder .count{margin-left:auto; color:var(--ms-grey); font-size:12px;}
+  .nav .hd{padding:6px 16px; font-size:11px; text-transform:uppercase; letter-spacing:.4px; color:var(--ms-grey2); margin-top:8px;}
+  .list{width:380px; border-right:1px solid var(--ms-line); background:#fff; display:flex; flex-direction:column; flex-shrink:0;}
+  .list .lhead{padding:10px 16px; border-bottom:1px solid var(--ms-line); display:flex; align-items:center;}
+  .list .lhead h2{font-size:16px;}
+  .list .lhead .filter{margin-left:auto; color:var(--ms-blue); font-size:12px;}
+  .msgs{overflow:auto; flex:1;}
+  .msg{padding:10px 14px 10px 12px; border-bottom:1px solid var(--ms-line); cursor:pointer; display:flex; gap:10px; position:relative;}
+  .msg:hover{background:#f3f2f1;} .msg.active{background:#e1efff;} .msg.unread{font-weight:600;}
+  .msg .bar{position:absolute; left:0; top:0; bottom:0; width:3px; background:transparent;}
+  .msg.unread .bar{background:var(--ms-blue);}
+  .msg .av{width:34px; height:34px; border-radius:50%; flex-shrink:0; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:13px;}
+  .msg .body{flex:1; min-width:0;}
+  .msg .l1{display:flex; align-items:baseline;}
+  .msg .from{font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .msg .time{margin-left:auto; font-size:11px; color:var(--ms-grey); white-space:nowrap; padding-left:8px;}
+  .msg .subj{font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .msg .prev{font-size:12px; color:var(--ms-grey); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .read{flex:1; background:#fff; display:flex; flex-direction:column; overflow:hidden;}
+  .read .rhead{padding:16px 24px 12px; border-bottom:1px solid var(--ms-line);}
+  .read .rsubj{font-size:21px; font-weight:600; margin-bottom:12px;}
+  .read .senderrow{display:flex; align-items:center; gap:12px;}
+  .read .senderrow .av{width:40px; height:40px; border-radius:50%; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:600;}
+  .read .sname{font-weight:600;} .read .saddr{color:var(--ms-grey); font-size:12px;}
+  .read .meta{margin-left:auto; text-align:right; color:var(--ms-grey); font-size:12px;}
+  .read .torow{font-size:12px; color:var(--ms-grey); margin-top:2px;}
+  .rbody{padding:18px 24px; overflow:auto; flex:1; line-height:1.55;}
+  .rbody p{margin-bottom:10px;}
+  .checkbtnrow{padding:10px 24px; border-bottom:1px solid var(--ms-line); display:flex; gap:10px; align-items:center; background:#fbfbfa;}
+  .ssbtn{background:var(--ms-blue); color:#fff; border:none; border-radius:4px; padding:9px 16px; font-size:13px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px; font-family:inherit;}
+  .ssbtn:hover{background:var(--ms-blue-dark);} .ssbtn:disabled{opacity:.6; cursor:default;}
+  .btnhint{color:var(--ms-grey); font-size:12px;}
+  .attach{border:1px solid var(--ms-line); border-radius:6px; margin:8px 0 16px; max-width:560px; overflow:hidden;}
+  .attach .ahead{display:flex; align-items:center; gap:10px; padding:10px 12px; background:#faf9f8; border-bottom:1px solid var(--ms-line);}
+  .attach .aico{width:30px; height:30px; border-radius:4px; background:#d13438; color:#fff; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700;}
+  .attach .aname{font-weight:600; font-size:13px;} .attach .asize{color:var(--ms-grey); font-size:11px;}
+  .inv{padding:16px; font-size:12px;}
+  .inv .ititle{font-size:20px; font-weight:700; color:var(--ms-blue); letter-spacing:1px;}
+  .inv .irow{display:flex; justify-content:space-between; gap:20px; margin-top:10px;}
+  .inv .lab{color:var(--ms-grey2); font-size:10px; text-transform:uppercase; letter-spacing:.4px;}
+  .inv table{width:100%; border-collapse:collapse; margin-top:12px; font-size:11px;}
+  .inv th{text-align:left; border-bottom:1px solid var(--ms-line); padding:6px 4px; color:var(--ms-grey); font-size:10px; text-transform:uppercase;}
+  .inv td{padding:6px 4px; border-bottom:1px solid #f4f3f2;}
+  .inv .tot{text-align:right; font-weight:700; margin-top:8px; font-size:13px;}
+  .logbox{background:#f6f8fa; border:1px solid var(--ms-line); border-radius:4px; padding:10px 12px; margin-top:12px; font-size:11px;}
+  .logbox .lab{display:block; margin-bottom:4px;} .logbox code{font-family:Consolas,monospace; color:#0b4f6c;}
+  .panel{position:fixed; top:0; right:0; bottom:0; width:440px; background:#fff; box-shadow:-4px 0 24px rgba(0,0,0,.18); transform:translateX(100%); transition:transform .25s ease; z-index:50; display:flex; flex-direction:column;}
+  .panel.open{transform:translateX(0);}
+  .panel .phead{padding:16px 20px; border-bottom:1px solid var(--ms-line); display:flex; align-items:center; gap:10px;}
+  .panel .phead .logo{font-weight:700; color:var(--ms-blue); font-size:15px;}
+  .panel .phead .sub{font-size:11px; color:var(--ms-grey); display:block;}
+  .panel .closex{margin-left:auto; border:none; background:none; font-size:20px; cursor:pointer; color:var(--ms-grey);}
+  .pbody{overflow:auto; flex:1; padding:18px 20px;}
+  .verdict{border-radius:8px; padding:16px; text-align:center; margin-bottom:16px;}
+  .verdict .vlabel{font-size:24px; font-weight:800; letter-spacing:1px;}
+  .verdict .vsub{font-size:12px; margin-top:4px; opacity:.85;}
+  .verdict.CLEAR{background:var(--ok-bg); color:var(--ok);}
+  .verdict.BLOCKED{background:var(--bad-bg); color:var(--bad);}
+  .verdict.REVIEW{background:var(--warn-bg); color:var(--warn);}
+  .risk{margin-top:10px; font-size:12px;}
+  .riskbar{height:8px; border-radius:4px; background:#eee; overflow:hidden; margin-top:4px;}
+  .riskbar i{display:block; height:100%;}
+  .seg{margin:18px 0 8px; font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--ms-grey); font-weight:700;}
+  .check{display:flex; gap:10px; padding:9px 0; border-bottom:1px solid var(--ms-line); align-items:flex-start;}
+  .check .st{font-weight:700; font-size:11px; padding:2px 7px; border-radius:10px; flex-shrink:0; min-width:46px; text-align:center;}
+  .st.PASS{background:var(--ok-bg); color:var(--ok);} .st.FAIL{background:var(--bad-bg); color:var(--bad);}
+  .st.WARN{background:var(--warn-bg); color:var(--warn);}
+  .st.HIGH{background:var(--bad-bg); color:var(--bad);} .st.MEDIUM{background:var(--warn-bg); color:var(--warn);}
+  .st.LOW{background:#eef2ff; color:#3b4cca;} .st.CLEAN{background:var(--ok-bg); color:var(--ok);}
+  .check .cf{font-weight:600; font-size:12px;} .check .cd{font-size:12px; color:var(--ms-grey); line-height:1.4;}
+  .vesselcard{background:#f6f8fa; border:1px solid var(--ms-line); border-radius:6px; padding:12px; font-size:12px; margin-bottom:6px;}
+  .vesselcard div{margin:2px 0;} .vesselcard b{color:var(--ms-dark);}
+  .src{font-size:11px; color:var(--ms-grey2); margin-top:12px; font-style:italic;}
+  .overlay{position:fixed; inset:0; background:rgba(0,0,0,.25); z-index:40; display:none;} .overlay.show{display:block;}
+  .spin{display:inline-block; width:14px; height:14px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:sp .7s linear infinite;}
+  @keyframes sp{to{transform:rotate(360deg);}}
+  .loading{padding:40px; text-align:center; color:var(--ms-grey);}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <span class="waffle">▦</span><span class="appname">Outlook</span>
+    <div class="search">🔍&nbsp; Search</div>
+    <div class="right"><a href="/">🚢 BOL Scanner</a><span>⚙</span><div class="avatar">AP</div></div>
+  </div>
+  <div class="app">
+    <div class="nav">
+      <div class="newmail">✉&nbsp; New mail</div>
+      <div class="folder active">📥 Inbox <span class="count" id="inboxCount"></span></div>
+      <div class="folder">📤 Sent Items</div><div class="folder">📝 Drafts</div>
+      <div class="folder">🗑 Deleted Items</div><div class="folder">⚠ Junk Email</div>
+      <div class="hd">ShipShield</div>
+      <div class="folder">🛡 Verified</div><div class="folder">🚫 Blocked</div>
+    </div>
+    <div class="list">
+      <div class="lhead"><h2>Inbox</h2><span class="filter">Filter ⌄</span></div>
+      <div class="msgs" id="msgs"><div class="loading">Loading inbox…</div></div>
+    </div>
+    <div class="read" id="read"></div>
+  </div>
+  <div class="overlay" id="overlay" onclick="closePanel()"></div>
+  <div class="panel" id="panel">
+    <div class="phead"><span style="font-size:20px;">🛡</span>
+      <div><span class="logo">ShipShield</span><span class="sub">Physical Reality Cross-Check</span></div>
+      <button class="closex" onclick="closePanel()">✕</button>
+    </div>
+    <div class="pbody" id="pbody"></div>
+  </div>
+
+<script>
+let EMAILS=[], activeId=null;
+const getDomain=a=>{a=(a||"").toLowerCase(); if(a.includes("<"))a=a.split("<").pop().replace(/[> ]/g,""); return a.includes("@")?a.split("@").pop().trim():"";};
+const getDisplay=a=>(a||"").includes("<")?a.split("<")[0].trim().replace(/"/g,""):"";
+const senderName=s=>getDisplay(s)||s.split("@")[0].replace(/[<>]/g,"");
+const initials=s=>{const n=getDisplay(s)||s.replace(/.*<|@.*/g,""); const p=n.replace(/[<>"]/g,"").split(/[ .@-]/).filter(Boolean); return ((p[0]||"?")[0]+(p[1]||"")[0]||"").toUpperCase();};
+const addrOnly=s=>s.includes("<")?s.replace(/.*<|>.*/g,""):s;
+
+async function init(){
+  const r=await fetch("mailbox/emails"); EMAILS=await r.json();
+  renderList(); if(EMAILS.length) openEmail(EMAILS[0].id);
+}
+function renderList(){
+  const c=document.getElementById("msgs"); c.innerHTML="";
+  document.getElementById("inboxCount").textContent=EMAILS.filter(e=>e.unread).length;
+  EMAILS.forEach(e=>{
+    const d=document.createElement("div");
+    d.className="msg"+(e.unread?" unread":"")+(e.id===activeId?" active":"");
+    d.onclick=()=>openEmail(e.id);
+    d.innerHTML=`<div class="bar"></div><div class="av" style="background:${e.color}">${initials(e.from)}</div>
+      <div class="body"><div class="l1"><span class="from">${senderName(e.from)}</span><span class="time">${e.time}</span></div>
+      <div class="subj">${e.subject}</div><div class="prev">📎 ${e.invoice.number}.pdf — ${e.invoice.vessel}</div></div>`;
+    c.appendChild(d);
+  });
+}
+function invoiceHTML(inv){
+  const rows=inv.items.map(it=>`<tr><td>${it[0]}</td><td style="text-align:right">${it[1]}</td></tr>`).join("");
+  return `<div class="attach"><div class="ahead"><div class="aico">PDF</div>
+    <div><div class="aname">${inv.number}.pdf</div><div class="asize">Invoice · 1 page</div></div></div>
+    <div class="inv"><div class="ititle">INVOICE</div>
+    <div class="irow"><div><div class="lab">From</div>${inv.vendor}</div>
+    <div style="text-align:right"><div class="lab">Invoice #</div>${inv.number}<br><span class="lab">Date</span> ${inv.date}</div></div>
+    <table><thead><tr><th>Description</th><th style="text-align:right">Amount</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="tot">TOTAL: ${inv.currency} ${inv.total}</div>
+    <div class="logbox"><span class="lab">Logistics reference</span>
+    <code>Vessel: ${inv.vessel} · Port of discharge: ${inv.port}</code><br>
+    <code>Beneficiary IBAN: ${inv.iban}</code></div></div></div>`;
+}
+function openEmail(id){
+  activeId=id; renderList();
+  const e=EMAILS.find(x=>x.id===id);
+  const bodyHtml=e.body.split("\n").map(p=>p.trim()?`<p>${p}</p>`:"").join("");
+  const replyRow=e.reply_to?`<div class="torow">Reply-To: <b style="color:var(--bad)">${e.reply_to}</b></div>`:"";
+  document.getElementById("read").innerHTML=`
+    <div class="rhead"><div class="rsubj">${e.subject}</div>
+    <div class="senderrow"><div class="av" style="background:${e.color}">${initials(e.from)}</div>
+    <div><div class="sname">${senderName(e.from)}</div><div class="saddr">&lt;${addrOnly(e.from)}&gt;</div></div>
+    <div class="meta">${e.date}<div class="torow">To: ${e.to}</div>${replyRow}</div></div></div>
+    <div class="checkbtnrow"><button class="ssbtn" id="ssbtn" onclick="runCheck('${e.id}')"><span class="ico">🛡</span> Cross-check facts</button>
+    <span class="btnhint">Verify this invoice against live vessel telemetry &amp; sender headers</span></div>
+    <div class="rbody">${bodyHtml}${invoiceHTML(e.invoice)}</div>`;
+}
+async function runCheck(id){
+  const btn=document.getElementById("ssbtn");
+  btn.disabled=true; btn.innerHTML=`<span class="spin"></span> Cross-checking…`;
+  try{
+    const r=await fetch("mailbox/check",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id})});
+    const data=await r.json();
+    showPanel(EMAILS.find(x=>x.id===id), data);
+  }catch(err){ alert("Cross-check failed: "+err); }
+  btn.disabled=false; btn.innerHTML=`<span class="ico">🛡</span> Cross-check facts`;
+}
+function showPanel(e,d){
+  const verdict=d.verdict, tel=d.telemetry, vec=d.vec;
+  const riskColor=verdict==="CLEAR"?"var(--ok)":verdict==="REVIEW"?"var(--warn)":"var(--bad)";
+  const vsub={CLEAR:"Physical event confirmed — safe to pay",REVIEW:"Unverifiable — needs manual review",
+    BLOCKED:"Fraud indicator detected — do NOT pay"}[verdict];
+  const vecHtml=vec.flags.length
+    ? vec.flags.map(f=>`<div class="check"><span class="st ${f.severity}">${f.severity}</span>
+        <div><div class="cf">${f.code}</div><div class="cd">${f.detail}</div></div></div>`).join("")
+    : `<div class="check"><span class="st CLEAN">CLEAN</span><div><div class="cf">No header anomalies</div>
+        <div class="cd">Sender domain, reply-to and subject line show no Vendor Email Compromise indicators.</div></div></div>`;
+  const telHtml=tel.checks.map(c=>`<div class="check"><span class="st ${c.status}">${c.status}</span>
+      <div><div class="cf">${c.field}</div><div class="cd">${c.detail}</div></div></div>`).join("");
+  const vessel=tel.vessel_name?`<div class="vesselcard"><div><b>${tel.vessel_name}</b> · ${tel.carrier}</div>
+      <div>MMSI ${e.payload.mmsi} · last AIS dock: <b>${tel.dock_date}</b></div></div>`:"";
+  document.getElementById("pbody").innerHTML=`
+    <div class="verdict ${verdict}"><div class="vlabel">${verdict==="CLEAR"?"✅ CLEAR":verdict==="REVIEW"?"⚠️ REVIEW":"🚫 BLOCKED"}</div>
+      <div class="vsub">${vsub}</div>
+      <div class="risk">Risk score: <b>${d.risk_score.toFixed(2)}</b>
+        <div class="riskbar"><i style="width:${d.risk_score*100}%;background:${riskColor}"></i></div></div></div>
+    ${vessel}
+    <div class="seg">Layer 1 — Email header analysis (VEC)</div>${vecHtml}
+    <div class="seg">Layer 2 — Physical telemetry validation</div>${telHtml}
+    <div class="src">Source: ${(tel.source||"").replace(/_/g," ")} · ${tel.checks.length} telemetry checks, ${vec.flags.length} header flags · engine: telemetry_validator.py + email_ingestor.py</div>`;
+  document.getElementById("panel").classList.add("open");
+  document.getElementById("overlay").classList.add("show");
+}
+function closePanel(){document.getElementById("panel").classList.remove("open");document.getElementById("overlay").classList.remove("show");}
+init();
+</script>
+</body>
+</html>

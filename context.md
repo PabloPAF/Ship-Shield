@@ -1,4 +1,4 @@
-# Project Context: SmartInvoiceAI + Physical Telemetry Validation Engine
+# Project Context: ShipShield — Physical Telemetry Validation Engine
 > Graduation project — Maritime Logistics Invoice Fraud Detection
 
 ---
@@ -15,7 +15,7 @@ The second attack vector is **header-level VEC**: the attacker sends an email wi
 
 ## 2. Solution
 
-**SmartInvoiceAI + Physical Telemetry Validation Engine** — a context-aware fraud detection layer built on top of an open-source invoice parser.
+**ShipShield — Physical Telemetry Validation Engine** — a context-aware fraud detection layer built on top of the open-source SmartInvoiceAI invoice parser.
 
 The system operates in two complementary layers:
 

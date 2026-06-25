@@ -1,6 +1,7 @@
 MIT License
 
-Copyright (c) 2025 Janani N
+Copyright (c) 2025 Janani N (original SmartInvoiceAI base parser)
+Copyright (c) 2026 ShipShield contributors (maritime telemetry validation layer)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

@@ -1,12 +1,15 @@
 """
-BOL Authenticity Scanner — standalone FastAPI web app.
+ShipShield FastAPI web app — BOL Authenticity Scanner + Accounts Payable mailbox.
 
-Accepts a Bill of Lading image, extracts logistics identifiers via
-LLaMA-4 Scout (Groq), then runs physical telemetry validation against
-the maritime AIS registry.
+  /          BOL scanner: upload a Bill of Lading image, extract logistics
+             identifiers via LLaMA-4 Scout (Groq), run physical telemetry validation.
+  /mailbox   Outlook-style AP inbox of shipping-invoice emails. The "Cross-check
+             facts" button runs the same engines (email_ingestor + telemetry_validator).
 
 Run:
-    uvicorn bol_scanner_app:app --reload --port 8501
+    uvicorn bol_scanner_app:app --reload --port 8502
+    # BOL scanner:  http://localhost:8502/
+    # AP mailbox:   http://localhost:8502/mailbox
 """
 
 import base64
@@ -18,14 +21,18 @@ from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
+from pydantic import BaseModel
 from groq import Groq
 from PIL import Image, ImageEnhance
 
 from telemetry_validator import telemetry_context_validation
+from email_ingestor import ingest_eml
 
 # ── Constants ──────────────────────────────────────────────────────────────
 
 TEMPLATE = Path(__file__).parent / "templates" / "bol_index.html"
+MAILBOX_TEMPLATE = Path(__file__).parent / "templates" / "mailbox.html"
+INBOX_DIR = Path(__file__).parent / "mailbox_inbox"
 SECRETS_PATH = Path(__file__).parent / ".streamlit" / "secrets.toml"
 
 SUPPORTED_MIME = {"image/jpeg", "image/jpg", "image/png", "image/webp", "image/tiff"}
@@ -180,6 +187,79 @@ async def scan_bol(file: UploadFile = File(...)):
 
     return JSONResponse({
         "bol": bol,
+        "telemetry": telemetry,
+        "mode": "live" if mt_key else "mock",
+    })
+
+
+# ── Mailbox (Accounts Payable inbox) ─────────────────────────────────────────
+# A demo Outlook-style inbox of shipping-invoice emails. The "Cross-check facts"
+# button posts to /mailbox/check, which runs the SAME real engines used elsewhere:
+# email_ingestor.ingest_eml() for VEC header forensics + telemetry_context_validation()
+# for the physical reality check.
+
+def _load_inbox() -> list:
+    with open(INBOX_DIR / "inbox.json", encoding="utf-8") as f:
+        return json.load(f)
+
+
+class CheckRequest(BaseModel):
+    id: str
+
+
+@app.get("/mailbox", response_class=HTMLResponse)
+async def mailbox():
+    return MAILBOX_TEMPLATE.read_text(encoding="utf-8")
+
+
+@app.get("/mailbox/emails")
+async def mailbox_emails():
+    """Return the inbox manifest used to render the message list and invoices."""
+    return JSONResponse(_load_inbox())
+
+
+@app.post("/mailbox/check")
+async def mailbox_check(req: CheckRequest):
+    """Cross-check one email: Layer 1 (VEC headers) + Layer 2 (physical telemetry)."""
+    inbox = _load_inbox()
+    entry = next((e for e in inbox if e["id"] == req.id), None)
+    if entry is None:
+        raise HTTPException(status_code=404, detail=f"Email id '{req.id}' not found in inbox.")
+
+    # Layer 1 — parse the actual .eml with the real email_ingestor
+    eml_path = INBOX_DIR / entry["file"]
+    try:
+        ingested = ingest_eml(eml_path.read_bytes())
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=f"Email parsing failed: {e}")
+    vec = {"risk": ingested.get("vec_risk", "UNKNOWN"), "flags": ingested.get("vec_flags", [])}
+
+    # Layer 2 — physical telemetry validation with the real engine
+    mt_key = _read_secret("MARINETRAFFIC_API_KEY")
+    ais_key = _read_secret("AISSTREAM_API_KEY")
+    try:
+        telemetry = telemetry_context_validation(
+            entry["payload"], marinetraffic_api_key=mt_key, aisstream_api_key=ais_key
+        )
+    except TypeError:
+        # tolerate engine builds without the aisstream parameter
+        telemetry = telemetry_context_validation(entry["payload"], marinetraffic_api_key=mt_key)
+
+    # Combined verdict — a HIGH email-header flag escalates to BLOCKED
+    verdict = telemetry.get("verdict", "REVIEW")
+    risk = float(telemetry.get("risk_score", 0.0))
+    if vec["risk"] == "HIGH":
+        verdict = "BLOCKED"
+        risk = max(risk, 1.0)
+    elif vec["risk"] in ("MEDIUM", "LOW") and verdict == "CLEAR":
+        verdict = "REVIEW"
+        risk = max(risk, 0.3)
+
+    return JSONResponse({
+        "id": entry["id"],
+        "verdict": verdict,
+        "risk_score": round(risk, 2),
+        "vec": vec,
         "telemetry": telemetry,
         "mode": "live" if mt_key else "mock",
     })

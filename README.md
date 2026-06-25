@@ -1,8 +1,8 @@
-# SmartInvoiceAI — Physical Telemetry Validation Engine
+# ShipShield — Physical Telemetry Validation Engine
 
-A maritime logistics invoice fraud detection system that combines AI-powered document extraction with a physical reality check layer. While standard tools validate *document structure*, this system validates *whether the physical event actually happened* — cross-referencing invoice logistics identifiers against live AIS vessel tracking data.
+A maritime logistics invoice fraud detection system that combines AI-powered document extraction with a physical reality check layer. While standard tools validate *document structure*, ShipShield validates *whether the physical event actually happened* — cross-referencing invoice logistics identifiers against live AIS vessel tracking data.
 
-Built as a graduation project extension on top of the open-source SmartInvoiceAI parser.
+ShipShield is built on top of the open-source SmartInvoiceAI invoice parser (credited under License), extended with a maritime telemetry validation layer and an Accounts Payable mailbox.
 
 [![Try Live Demo](https://img.shields.io/badge/🚀_Try_Live_Demo-Click_Here-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://smartinvoiceai.streamlit.app/)
 
@@ -193,7 +193,34 @@ uvicorn bol_scanner_app:app --reload --port 8502
 
 ---
 
-### 5. Fraud Patterns Detected
+### 5. Accounts Payable Mailbox
+
+An Outlook-style inbox served at `/mailbox` by the same FastAPI app. It loads a demo
+inbox of shipping-invoice emails (`mailbox_inbox/*.eml` + `inbox.json`) — a mix of
+legitimate invoices and fraud cases. Open any email and click **🛡 Cross-check facts**:
+
+```
+POST /mailbox/check  { "id": "<email id>" }
+        ↓
+Layer 1 — email_ingestor.ingest_eml()      → VEC header forensics (reply-to mismatch,
+                                              free-provider sender, urgency keywords)
+Layer 2 — telemetry_context_validation()   → port / IBAN / cargo / DWT / voyage / date
+        ↓
+Combined verdict rendered in a side panel:
+  ✅ CLEAR   ⚠️ REVIEW   🚫 BLOCKED  + per-check breakdown and risk score
+```
+
+A HIGH email-header flag escalates the verdict to BLOCKED. The button calls the **same
+engines** used by the BOL scanner and the Streamlit dashboard — no logic is duplicated.
+
+```bash
+uvicorn bol_scanner_app:app --reload --port 8502
+# open http://localhost:8502/mailbox
+```
+
+---
+
+### 6. Fraud Patterns Detected
 
 Based on Skuld P&I Club maritime fraud case files:
 
@@ -227,16 +254,18 @@ The Telemetry Validation tab has 10 built-in scenarios. Key examples:
 ## Project Structure
 
 ```
-SmartInvoiceAI/
-├── enhanced_ui.py          # 5-tab Streamlit dashboard
-├── bol_scanner_app.py      # FastAPI BOL authenticity scanner (standalone web app)
+ShipShield/
+├── enhanced_ui.py          # 6-tab Streamlit dashboard
+├── bol_scanner_app.py      # FastAPI app — BOL scanner + Accounts Payable mailbox
 ├── templates/
-│   └── bol_index.html      # BOL scanner frontend — single-file, no build step
-├── telemetry_validator.py  # Shared validation engine (used by both apps)
+│   ├── bol_index.html      # BOL scanner frontend — single-file, no build step
+│   └── mailbox.html        # Outlook-style AP mailbox frontend (Cross-check facts button)
+├── mailbox_inbox/          # Demo .eml inbox + inbox.json manifest (8 scenarios)
+├── telemetry_validator.py  # Shared validation engine (used by all surfaces)
 ├── email_ingestor.py       # VEC email header analysis + attachment extraction
 ├── utils.py                # Pydantic models, Groq client, image helpers
 ├── analytics.py            # Isolation Forest anomaly detection
-├── app.py                  # Single-invoice baseline app (original SmartInvoiceAI)
+├── app.py                  # Single-invoice baseline app (original SmartInvoiceAI base)
 ├── maritime_registry.json  # Mock AIS registry — 3 vessels keyed by MMSI
 ├── requirements.txt
 ├── .streamlit/
@@ -251,8 +280,8 @@ SmartInvoiceAI/
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/JaanuNan/SmartInvoiceAI
-   cd SmartInvoiceAI
+   git clone https://github.com/PabloPAF/Ship-Shield
+   cd Ship-Shield
    ```
 
 2. Install dependencies:
@@ -274,10 +303,11 @@ SmartInvoiceAI/
    streamlit run enhanced_ui.py
    ```
 
-   **BOL scanner web app** (standalone):
+   **BOL scanner + Accounts Payable mailbox** (FastAPI):
    ```bash
    uvicorn bol_scanner_app:app --reload --port 8502
-   # open http://localhost:8502
+   # BOL scanner:  http://localhost:8502/
+   # AP mailbox:   http://localhost:8502/mailbox
    ```
 
 Both apps read from the same `secrets.toml`. Without a MarineTraffic key, all telemetry checks use the local `maritime_registry.json` — all demo scenarios work fully offline.
@@ -340,9 +370,11 @@ In addition to telemetry validation, Tab 3 applies document-level rules:
 
 ## License
 
-Distributed under the MIT License.
+Distributed under the MIT License. ShipShield extends the open-source
+**SmartInvoiceAI** invoice parser by Janani N; the original copyright notice is
+preserved in `LICENSE`.
 
-## Contact
+## Credits
 
-Project Lead: Janani N  
-Live Demo: https://smartinvoiceai.streamlit.app/
+- ShipShield — maritime telemetry validation layer + Accounts Payable mailbox
+- Base invoice parser: [SmartInvoiceAI](https://github.com/JaanuNan/SmartInvoiceAI) by Janani N

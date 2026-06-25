@@ -1,0 +1,378 @@
+[
+  {
+    "id": "vec",
+    "file": "01_vec_iban_hijack.eml",
+    "color": "#a4262c",
+    "unread": true,
+    "time": "Wed 14:12",
+    "from": "\"Atlantic Shipping BV\" <billing@atlantlc-shipping.com>",
+    "reply_to": "urgent.payments@gmail.com",
+    "to": "ap@acme-logistics.com",
+    "subject": "URGENT: Updated Banking Details - Invoice INV-2026-441 ACTION REQUIRED",
+    "date": "Wed, 24 Jun 2026 14:12:00 +0100",
+    "body": "Dear Finance Team,\n\nURGENT: Please be advised that our banking details have changed effective immediately.\nPlease update your payment records for Invoice INV-2026-441 (Atlantic Explorer, Port of Rotterdam) with our new account below and remit payment today to avoid demurrage charges.\n\n  Bank: Quickpay Solutions Ltd\n  New IBAN: GB29 NWBK 6016 1331 9268 19\n\nThis is time sensitive - please ACTION IMMEDIATELY.\n\nAtlantic Shipping BV - Billing Department\n",
+    "invoice": {
+      "number": "INV-2026-441",
+      "vendor": "Atlantic Shipping BV",
+      "vessel": "Atlantic Explorer",
+      "mmsi": "244170218",
+      "port": "Port of Rotterdam",
+      "date": "2026-06-20",
+      "voyage": "VOY-2026-777",
+      "cargo": "Containers",
+      "qty": "11,000 MT",
+      "iban": "GB29 NWBK 6016 1331 9268 19",
+      "currency": "EUR",
+      "total": "42,500.00",
+      "items": [
+        [
+          "Ocean freight - Rotterdam discharge",
+          "EUR 38,000.00"
+        ],
+        [
+          "Terminal handling & documentation",
+          "EUR 4,500.00"
+        ]
+      ]
+    },
+    "payload": {
+      "mmsi": "244170218",
+      "discharge_port": "Port of Rotterdam",
+      "invoice_date": "2026-06-20",
+      "submission_date": "2026-06-24",
+      "iban": "GB29NWBK60161331926819",
+      "cargo_type": "container",
+      "voyage_id": "VOY-2026-777",
+      "cargo_quantity_mt": 11000
+    }
+  },
+  {
+    "id": "clean1",
+    "file": "02_clean_atlantic.eml",
+    "color": "#0078d4",
+    "unread": true,
+    "time": "Sat 10:30",
+    "from": "billing@atlantic-shipping.com",
+    "reply_to": null,
+    "to": "ap@acme-logistics.com",
+    "subject": "Invoice INV-2026-1001 - Atlantic Explorer - Port of Rotterdam",
+    "date": "Sat, 20 Jun 2026 10:30:00 +0100",
+    "body": "Dear Accounts Payable,\n\nPlease find attached invoice INV-2026-1001 for container discharge handled at Port of Rotterdam on 2026-06-20.\nVessel: Atlantic Explorer (MMSI 244170218) - Voyage VOY-2026-1001.\nPayment terms net 30.\n\nKind regards,\nAtlantic Shipping BV - Billing Department\n",
+    "invoice": {
+      "number": "INV-2026-1001",
+      "vendor": "Atlantic Shipping BV",
+      "vessel": "Atlantic Explorer",
+      "mmsi": "244170218",
+      "port": "Port of Rotterdam",
+      "date": "2026-06-20",
+      "voyage": "VOY-2026-1001",
+      "cargo": "Containers",
+      "qty": "12,000 MT",
+      "iban": "NL91 ABNA 0417 1643 00",
+      "currency": "EUR",
+      "total": "31,800.00",
+      "items": [
+        [
+          "Ocean freight (12,000 MT containers)",
+          "EUR 27,500.00"
+        ],
+        [
+          "THC & documentation",
+          "EUR 4,300.00"
+        ]
+      ]
+    },
+    "payload": {
+      "mmsi": "244170218",
+      "discharge_port": "Port of Rotterdam",
+      "invoice_date": "2026-06-20",
+      "submission_date": "2026-06-21",
+      "iban": "NL91ABNA0417164300",
+      "cargo_type": "container",
+      "voyage_id": "VOY-2026-1001",
+      "cargo_quantity_mt": 12000
+    }
+  },
+  {
+    "id": "clean2",
+    "file": "03_clean_baltic.eml",
+    "color": "#0078d4",
+    "unread": false,
+    "time": "Thu 09:05",
+    "from": "operations@nordic-freight.com",
+    "reply_to": null,
+    "to": "ap@acme-logistics.com",
+    "subject": "Invoice INV-2026-1002 - Baltic Carrier - Port of Hamburg",
+    "date": "Thu, 18 Jun 2026 09:05:00 +0100",
+    "body": "Hello,\n\nAttached is invoice INV-2026-1002 covering 40,000 MT of bulk grain discharged at Port of Hamburg on 2026-06-18.\nVessel: Baltic Carrier (MMSI 211456200) - Voyage VOY-2026-1002.\n\nBest regards,\nNordic Freight GmbH - Operations\n",
+    "invoice": {
+      "number": "INV-2026-1002",
+      "vendor": "Nordic Freight GmbH",
+      "vessel": "Baltic Carrier",
+      "mmsi": "211456200",
+      "port": "Port of Hamburg",
+      "date": "2026-06-18",
+      "voyage": "VOY-2026-1002",
+      "cargo": "Bulk grain",
+      "qty": "40,000 MT",
+      "iban": "DE89 3704 0044 0532 0130 00",
+      "currency": "EUR",
+      "total": "88,000.00",
+      "items": [
+        [
+          "Bulk grain freight (40,000 MT)",
+          "EUR 82,000.00"
+        ],
+        [
+          "Port dues & stevedoring",
+          "EUR 6,000.00"
+        ]
+      ]
+    },
+    "payload": {
+      "mmsi": "211456200",
+      "discharge_port": "Port of Hamburg",
+      "invoice_date": "2026-06-18",
+      "submission_date": "2026-06-19",
+      "iban": "DE89370400440532013000",
+      "cargo_type": "grain",
+      "voyage_id": "VOY-2026-1002",
+      "cargo_quantity_mt": 40000
+    }
+  },
+  {
+    "id": "port",
+    "file": "04_port_mismatch.eml",
+    "color": "#c19c00",
+    "unread": true,
+    "time": "Sat 16:40",
+    "from": "billing@atlantic-shipping.com",
+    "reply_to": null,
+    "to": "ap@acme-logistics.com",
+    "subject": "Invoice INV-2026-1004 - Atlantic Explorer - Port of Antwerp",
+    "date": "Sat, 20 Jun 2026 16:40:00 +0100",
+    "body": "Dear Accounts Payable,\n\nInvoice INV-2026-1004 attached for discharge at Port of Antwerp on 2026-06-20.\nVessel: Atlantic Explorer (MMSI 244170218) - Voyage VOY-2026-1004.\n\nRegards,\nAtlantic Shipping BV - Billing Department\n",
+    "invoice": {
+      "number": "INV-2026-1004",
+      "vendor": "Atlantic Shipping BV",
+      "vessel": "Atlantic Explorer",
+      "mmsi": "244170218",
+      "port": "Port of Antwerp",
+      "date": "2026-06-20",
+      "voyage": "VOY-2026-1004",
+      "cargo": "Containers",
+      "qty": "12,000 MT",
+      "iban": "NL91 ABNA 0417 1643 00",
+      "currency": "EUR",
+      "total": "30,200.00",
+      "items": [
+        [
+          "Ocean freight - Antwerp discharge",
+          "EUR 26,000.00"
+        ],
+        [
+          "THC & documentation",
+          "EUR 4,200.00"
+        ]
+      ]
+    },
+    "payload": {
+      "mmsi": "244170218",
+      "discharge_port": "Port of Antwerp",
+      "invoice_date": "2026-06-20",
+      "submission_date": "2026-06-21",
+      "iban": "NL91ABNA0417164300",
+      "cargo_type": "container",
+      "voyage_id": "VOY-2026-1004",
+      "cargo_quantity_mt": 12000
+    }
+  },
+  {
+    "id": "cargo",
+    "file": "05_tanker_grain.eml",
+    "color": "#c19c00",
+    "unread": true,
+    "time": "Mon 11:20",
+    "from": "accounts@iberian-cargo.com",
+    "reply_to": null,
+    "to": "ap@acme-logistics.com",
+    "subject": "Invoice INV-2026-1005 - Mediterranean Star - Port of Barcelona",
+    "date": "Mon, 22 Jun 2026 11:20:00 +0100",
+    "body": "Dear Sir/Madam,\n\nPlease find invoice INV-2026-1005 for 20,000 MT bulk grain discharged at Port of Barcelona on 2026-06-22.\nVessel: Mediterranean Star (MMSI 224143870) - Voyage VOY-2026-1005.\n\nThank you,\nIberian Cargo SL - Accounts\n",
+    "invoice": {
+      "number": "INV-2026-1005",
+      "vendor": "Iberian Cargo SL",
+      "vessel": "Mediterranean Star",
+      "mmsi": "224143870",
+      "port": "Port of Barcelona",
+      "date": "2026-06-22",
+      "voyage": "VOY-2026-1005",
+      "cargo": "Bulk grain",
+      "qty": "20,000 MT",
+      "iban": "ES91 2100 0418 4502 0005 1332",
+      "currency": "EUR",
+      "total": "54,000.00",
+      "items": [
+        [
+          "Bulk grain freight (20,000 MT)",
+          "EUR 49,500.00"
+        ],
+        [
+          "Port dues",
+          "EUR 4,500.00"
+        ]
+      ]
+    },
+    "payload": {
+      "mmsi": "224143870",
+      "discharge_port": "Port of Barcelona",
+      "invoice_date": "2026-06-22",
+      "submission_date": "2026-06-23",
+      "iban": "ES9121000418450200051332",
+      "cargo_type": "grain",
+      "voyage_id": "VOY-2026-1005",
+      "cargo_quantity_mt": 20000
+    }
+  },
+  {
+    "id": "dwt",
+    "file": "06_dwt_overstatement.eml",
+    "color": "#c19c00",
+    "unread": true,
+    "time": "Thu 13:55",
+    "from": "operations@nordic-freight.com",
+    "reply_to": null,
+    "to": "ap@acme-logistics.com",
+    "subject": "Invoice INV-2026-1006 - Baltic Carrier - Port of Hamburg",
+    "date": "Thu, 18 Jun 2026 13:55:00 +0100",
+    "body": "Hello,\n\nInvoice INV-2026-1006 attached for 50,000 MT of iron ore discharged at Port of Hamburg on 2026-06-18.\nVessel: Baltic Carrier (MMSI 211456200) - Voyage VOY-2026-1006.\n\nRegards,\nNordic Freight GmbH - Operations\n",
+    "invoice": {
+      "number": "INV-2026-1006",
+      "vendor": "Nordic Freight GmbH",
+      "vessel": "Baltic Carrier",
+      "mmsi": "211456200",
+      "port": "Port of Hamburg",
+      "date": "2026-06-18",
+      "voyage": "VOY-2026-1006",
+      "cargo": "Iron ore",
+      "qty": "50,000 MT",
+      "iban": "DE89 3704 0044 0532 0130 00",
+      "currency": "EUR",
+      "total": "112,000.00",
+      "items": [
+        [
+          "Bulk ore freight (50,000 MT)",
+          "EUR 104,000.00"
+        ],
+        [
+          "Port dues & stevedoring",
+          "EUR 8,000.00"
+        ]
+      ]
+    },
+    "payload": {
+      "mmsi": "211456200",
+      "discharge_port": "Port of Hamburg",
+      "invoice_date": "2026-06-18",
+      "submission_date": "2026-06-22",
+      "iban": "DE89370400440532013000",
+      "cargo_type": "ore",
+      "voyage_id": "VOY-2026-1006",
+      "cargo_quantity_mt": 50000
+    }
+  },
+  {
+    "id": "dup",
+    "file": "07_duplicate_voyage.eml",
+    "color": "#c19c00",
+    "unread": true,
+    "time": "Sun 08:15",
+    "from": "billing@atlantic-shipping.com",
+    "reply_to": null,
+    "to": "ap@acme-logistics.com",
+    "subject": "Invoice INV-2026-441 (re-issue) - Atlantic Explorer - Port of Rotterdam",
+    "date": "Sun, 21 Jun 2026 08:15:00 +0100",
+    "body": "Dear Accounts Payable,\n\nRe-issuing invoice for Voyage VOY-2026-441 (Atlantic Explorer) discharged at Port of Rotterdam.\nPlease process at your earliest convenience.\n\nAtlantic Shipping BV - Billing Department\n",
+    "invoice": {
+      "number": "INV-2026-441",
+      "vendor": "Atlantic Shipping BV",
+      "vessel": "Atlantic Explorer",
+      "mmsi": "244170218",
+      "port": "Port of Rotterdam",
+      "date": "2026-06-20",
+      "voyage": "VOY-2026-441",
+      "cargo": "Containers",
+      "qty": "12,000 MT",
+      "iban": "NL91 ABNA 0417 1643 00",
+      "currency": "EUR",
+      "total": "31,800.00",
+      "items": [
+        [
+          "Ocean freight - Rotterdam discharge",
+          "EUR 27,500.00"
+        ],
+        [
+          "THC & documentation",
+          "EUR 4,300.00"
+        ]
+      ]
+    },
+    "payload": {
+      "mmsi": "244170218",
+      "discharge_port": "Port of Rotterdam",
+      "invoice_date": "2026-06-20",
+      "submission_date": "2026-06-21",
+      "iban": "NL91ABNA0417164300",
+      "cargo_type": "container",
+      "voyage_id": "VOY-2026-441",
+      "cargo_quantity_mt": 12000
+    }
+  },
+  {
+    "id": "postdate",
+    "file": "08_postdated_caseA.eml",
+    "color": "#c19c00",
+    "unread": true,
+    "time": "Wed 17:30",
+    "from": "accounts@iberian-cargo.com",
+    "reply_to": null,
+    "to": "ap@acme-logistics.com",
+    "subject": "Invoice INV-2026-1008 - Mediterranean Star - Port of Barcelona",
+    "date": "Wed, 24 Jun 2026 17:30:00 +0100",
+    "body": "Dear Sir/Madam,\n\nAttached invoice INV-2026-1008 (dated 2026-06-10) for crude oil discharge at Port of Barcelona.\nVessel: Mediterranean Star (MMSI 224143870) - Voyage VOY-2026-1008.\n\nIberian Cargo SL - Accounts\n",
+    "invoice": {
+      "number": "INV-2026-1008",
+      "vendor": "Iberian Cargo SL",
+      "vessel": "Mediterranean Star",
+      "mmsi": "224143870",
+      "port": "Port of Barcelona",
+      "date": "2026-06-10",
+      "voyage": "VOY-2026-1008",
+      "cargo": "Crude oil",
+      "qty": "18,000 MT",
+      "iban": "ES91 2100 0418 4502 0005 1332",
+      "currency": "EUR",
+      "total": "61,000.00",
+      "items": [
+        [
+          "Crude oil freight (18,000 MT)",
+          "EUR 56,000.00"
+        ],
+        [
+          "Port dues",
+          "EUR 5,000.00"
+        ]
+      ]
+    },
+    "payload": {
+      "mmsi": "224143870",
+      "discharge_port": "Port of Barcelona",
+      "invoice_date": "2026-06-10",
+      "submission_date": "2026-06-24",
+      "iban": "ES9121000418450200051332",
+      "cargo_type": "crude_oil",
+      "voyage_id": "VOY-2026-1008",
+      "cargo_quantity_mt": 18000
+    }
+  }
+]
