@@ -590,5 +590,50 @@
       "voyage_id": "VOY-2026-3002",
       "cargo_quantity_mt": 25000
     }
+  },
+  {
+    "id": "entity_fail",
+    "file": "14_unverified_entity.eml",
+    "color": "#c19c00",
+    "unread": true,
+    "time": "Tue 10:05",
+    "from": "billing@ghostline-logistics.example",
+    "reply_to": null,
+    "to": "ap@acme-logistics.com",
+    "subject": "Invoice INV-2026-3003 - Phantom Trader - Port of Rotterdam",
+    "date": "Tue, 23 Jun 2026 10:05:00 +0100",
+    "body": "Dear Accounts Payable,\n\nAttached invoice INV-2026-3003 for container discharge at Port of Rotterdam on 2026-06-23.\nVessel: Phantom Trader (MMSI 352999000) - Voyage VOY-2026-3003.\n\nGhostline Logistics Ltd\n",
+    "doc_type": "invoice",
+    "invoice": {
+      "number": "INV-2026-3003",
+      "vendor": "Ghostline Logistics Ltd",
+      "vessel": "Phantom Trader",
+      "mmsi": "352999000",
+      "port": "Port of Rotterdam",
+      "date": "2026-06-23",
+      "currency": "EUR",
+      "total": "33,000.00",
+      "items": [
+        [
+          "Ocean freight - Rotterdam discharge",
+          "EUR 29,000.00"
+        ],
+        [
+          "THC & documentation",
+          "EUR 4,000.00"
+        ]
+      ],
+      "iban": "NL10 RABO 0123 4567 89"
+    },
+    "payload": {
+      "mmsi": "352999000",
+      "discharge_port": "Port of Rotterdam",
+      "invoice_date": "2026-06-23",
+      "submission_date": "2026-06-24",
+      "iban": "NL10RABO0123456789",
+      "cargo_type": "container",
+      "voyage_id": "VOY-2026-3003",
+      "cargo_quantity_mt": 12000
+    }
   }
 ]

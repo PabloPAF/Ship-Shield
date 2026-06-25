@@ -53,5 +53,16 @@
         "last_seen": "2026-06-25"
       }
     }
+  },
+  "ghostline logistics ltd": {
+    "display_name": "Ghostline Logistics Ltd",
+    "ibans": {
+      "7219a0485c67ffef7122d4e8f9cfe0d4d59ec9a7340abd5e3a0f28d524babb1e": {
+        "confirmed": true,
+        "country": "NL",
+        "first_seen": "2026-06-25",
+        "last_seen": "2026-06-25"
+      }
+    }
   }
 }

@@ -63,5 +63,18 @@
     "registered_iban": "DE12500105170000000333",
     "carrier": "Old Salt Shipping Ltd",
     "invoiced_voyages": []
+  },
+  "352999000": {
+    "vessel_id": "VESS-2999",
+    "vessel_name": "Phantom Trader",
+    "mmsi": "352999000",
+    "imo": "9100222",
+    "vessel_type": "container",
+    "deadweight_tonnes": 18000,
+    "last_docked_port": "Port of Rotterdam",
+    "dock_date": "2026-06-23",
+    "registered_iban": "NL10RABO0123456789",
+    "carrier": "Ghostline Logistics Ltd",
+    "invoiced_voyages": []
   }
 }

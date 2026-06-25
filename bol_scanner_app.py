@@ -32,6 +32,7 @@ from vendor_ledger import check_vendor_iban
 from document_hygiene import scan_attachments
 from sanctions_screen import screen_counterparty
 from vessel_risk import assess_vessel
+from entity_verify import verify_entity
 import email_forensics
 
 # ── Constants ──────────────────────────────────────────────────────────────
@@ -290,6 +291,15 @@ async def mailbox_check(req: CheckRequest):
         sanctions_api_key=_read_secret("SANCTIONS_API_KEY"),
     )
     counterparty.append(sanctions)
+
+    # Layer 4 — counterparty existence (VAT / commercial register).
+    entity = verify_entity(
+        entry.get("invoice", {}).get("vendor", ""),
+        invoice_date=entry["payload"].get("invoice_date", ""),
+        vies_api_key=_read_secret("VIES_API_KEY"),
+    )
+    if entity:
+        counterparty.append(entity)
 
     # Layer 2 (addendum) — vessel-risk enrichment (Equasis / Port State Control).
     vessel_risk = assess_vessel(
