@@ -329,7 +329,7 @@ async def mailbox_check(req: CheckRequest):
     risk = float(telemetry.get("risk_score", 0.0))
     if vec["risk"] == "HIGH":
         verdict = "BLOCKED"
-        risk = max(risk, 1.0)
+        risk = max(risk, 0.80)
     elif vec["risk"] in ("MEDIUM", "LOW") and verdict == "CLEAR":
         verdict = "REVIEW"
         risk = max(risk, 0.3)
@@ -345,7 +345,7 @@ async def mailbox_check(req: CheckRequest):
     if hygiene:
         if hygiene["status"] == "FAIL":
             verdict = "BLOCKED"
-            risk = max(risk, 1.0)
+            risk = max(risk, 0.90)
         elif hygiene["status"] == "WARN" and verdict == "CLEAR":
             verdict = "REVIEW"
             risk = max(risk, 0.3)

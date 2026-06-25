@@ -70,5 +70,5 @@ def enrich_bank(vendor: str, iban: str, vendor_country: str = "",
         "status": "FAIL", "field": "bank_vop",
         "detail": (f"Verification of Payee MISMATCH: account {masked} is registered to "
                    f"'{holder}', not '{vendor}'. Account does not belong to the vendor — do not pay.{note}"),
-        "masked": masked, "country": country, "source": source, "risk": 1.0,
+        "masked": masked, "country": country, "source": source, "risk": 0.95,
     }

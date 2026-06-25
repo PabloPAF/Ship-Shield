@@ -300,6 +300,37 @@ resolve to REVIEW — never a false clear.
 | 3 — Bank account | Has the account changed, and does it belong to the vendor? | `vendor_ledger.py`, `bank_enrich.py` |
 | 4 — Counterparty | Is the vendor real, valid and not sanctioned? | `sanctions_screen.py`, `entity_verify.py` |
 
+### Indicator weights (IOC scoring)
+
+Each indicator carries a graduated weight, not a blanket maximum — a late invoice
+is not as damning as a sanctions hit. The overall **risk score is the highest
+weight among the indicators that fired**. The verdict is **BLOCKED** if any
+blocking indicator fires (or a HIGH email-header flag), **REVIEW** if only
+review-grade signals fire, otherwise **CLEAR**.
+
+| Indicator | Layer | Weight | Verdict |
+|---|---|---:|---|
+| Sanctions / dark-fleet match | 4 | 1.00 | BLOCK |
+| Unknown / unidentifiable vessel | 2 | 1.00 | BLOCK |
+| Verification-of-Payee mismatch (account holder ≠ vendor) | 3 | 0.95 | BLOCK |
+| IBAN ≠ registered carrier account | 2/3 | 0.90 | BLOCK |
+| New bank account for a known vendor (change-detection) | 3 | 0.90 | BLOCK |
+| Active/hidden content in attachment | 0 | 0.90 | BLOCK |
+| Duplicate voyage (ghost cargo) | 2 | 0.85 | BLOCK |
+| Port of discharge mismatch | 2 | 0.80 | BLOCK |
+| Counterparty dissolved / insolvent | 4 | 0.80 | BLOCK |
+| VEC email header — HIGH (reply-to mismatch, look-alike, homoglyph) | 1 | 0.80 | BLOCK |
+| VAT ID invalid | 4 | 0.75 | BLOCK |
+| Cargo / vessel-type incompatible | 2 | 0.75 | BLOCK |
+| DWT capacity exceeded | 2 | 0.70 | BLOCK |
+| Invoice/dock date drift (post/ante-dating) | 2 | 0.55 | BLOCK |
+| Late agency invoice (> 14 days) | 2 | 0.50 | BLOCK |
+| Vessel risk — PSC detentions / flag of convenience | 2+ | 0.30 | REVIEW |
+| Unverifiable — API down, no baseline, new incorporation, VoP n/a | any | 0.30 | REVIEW |
+| Email header — MEDIUM/LOW (free provider, urgency, zero-width) | 1 | 0.30 | REVIEW* |
+
+\* Email MEDIUM/LOW flags only move a CLEAR verdict to REVIEW; they do not override a higher signal.
+
 ---
 
 ## Installation

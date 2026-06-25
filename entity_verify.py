@@ -66,13 +66,13 @@ def verify_entity(vendor: str, invoice_date: str = "", vies_api_key: str | None 
         return {
             "status": "FAIL", "field": "entity",
             "detail": f"Counterparty '{vendor}' has registry status '{status}' — not a valid trading entity. Do not pay.",
-            "source": source, "risk": 0.95,
+            "source": source, "risk": 0.80,
         }
     if rec.get("vat_valid") is False:
         return {
             "status": "FAIL", "field": "entity",
             "detail": f"VAT ID {rec.get('vat_id','')} for '{vendor}' failed validation (VIES). Possible fabricated counterparty.",
-            "source": source, "risk": 0.9,
+            "source": source, "risk": 0.75,
         }
 
     age = _days_since(rec.get("incorporated", ""), invoice_date)

@@ -249,7 +249,7 @@ def telemetry_context_validation(
                     "detail": f"Invoice claims '{claimed}'. Registry shows: '{registry_port}'. ({api_label} unavailable — verified via fallback)",
                 })
                 is_tampered = True
-                risk_score = max(risk_score, 0.95)
+                risk_score = max(risk_score, 0.80)
         else:
             checks.append({
                 "field": "discharge_port",
@@ -277,7 +277,7 @@ def telemetry_context_validation(
                     "detail": f"Invoice claims '{claimed_port}'. AIS recent ports: {actual}.",
                 })
                 is_tampered = True
-                risk_score = max(risk_score, 0.95)
+                risk_score = max(risk_score, 0.80)
 
         elif use_ais:
             result = _run_ais_stream_check(identifier, claimed_port, ais_window_seconds, aisstream_api_key)
@@ -303,7 +303,7 @@ def telemetry_context_validation(
                     ),
                 })
                 is_tampered = True
-                risk_score = max(risk_score, 0.95)
+                risk_score = max(risk_score, 0.80)
 
         else:
             registry_port = registry_entry.get("last_docked_port", "")
@@ -314,7 +314,7 @@ def telemetry_context_validation(
                     "detail": f"Invoice claims '{claimed_port}'. Registry shows: '{registry_port}'.",
                 })
                 is_tampered = True
-                risk_score = max(risk_score, 0.95)
+                risk_score = max(risk_score, 0.80)
             else:
                 checks.append({
                     "field": "discharge_port",
@@ -338,7 +338,7 @@ def telemetry_context_validation(
                     ),
                 })
                 is_tampered = True
-                risk_score = max(risk_score, 0.85)
+                risk_score = max(risk_score, 0.55)
             else:
                 checks.append({
                     "field": "invoice_date",
@@ -362,7 +362,7 @@ def telemetry_context_validation(
                 ),
             })
             is_tampered = True
-            risk_score = max(risk_score, 0.9)
+            risk_score = max(risk_score, 0.75)
         elif vessel_type == "bulk_carrier" and cargo_type in _TANKER_CARGOES:
             checks.append({
                 "field": "cargo_type",
@@ -373,7 +373,7 @@ def telemetry_context_validation(
                 ),
             })
             is_tampered = True
-            risk_score = max(risk_score, 0.9)
+            risk_score = max(risk_score, 0.75)
         elif vessel_type:
             checks.append({
                 "field": "cargo_type",
@@ -394,7 +394,7 @@ def telemetry_context_validation(
                 ),
             })
             is_tampered = True
-            risk_score = max(risk_score, 1.0)
+            risk_score = max(risk_score, 0.85)
         else:
             checks.append({
                 "field": "voyage_id",
@@ -418,7 +418,7 @@ def telemetry_context_validation(
                         ),
                     })
                     is_tampered = True
-                    risk_score = max(risk_score, 0.95)
+                    risk_score = max(risk_score, 0.70)
                 else:
                     checks.append({
                         "field": "cargo_quantity_mt",
@@ -445,7 +445,7 @@ def telemetry_context_validation(
                     ),
                 })
                 is_tampered = True
-                risk_score = max(risk_score, 0.8)
+                risk_score = max(risk_score, 0.50)
             else:
                 checks.append({
                     "field": "submission_date",
@@ -466,7 +466,7 @@ def telemetry_context_validation(
                     "detail": "IBAN on invoice does not match registered carrier IBAN. Possible account hijack.",
                 })
                 is_tampered = True
-                risk_score = max(risk_score, 1.0)
+                risk_score = max(risk_score, 0.90)
             else:
                 checks.append({
                     "field": "iban",

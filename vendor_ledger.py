@@ -177,5 +177,5 @@ def check_vendor_iban(vendor: str, iban: str, ledger: dict | None = None) -> dic
         ),
         "masked": masked,
         "country": country,
-        "risk": 1.0,
+        "risk": 0.90,
     }
