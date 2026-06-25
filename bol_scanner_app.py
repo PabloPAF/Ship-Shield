@@ -28,6 +28,7 @@ from PIL import Image, ImageEnhance
 
 from telemetry_validator import telemetry_context_validation
 from email_ingestor import ingest_eml
+from vendor_ledger import check_vendor_iban
 
 # ── Constants ──────────────────────────────────────────────────────────────
 
@@ -250,7 +251,12 @@ async def mailbox_check(req: CheckRequest):
         # tolerate engine builds without the aisstream parameter
         telemetry = telemetry_context_validation(entry["payload"], marinetraffic_api_key=mt_key)
 
-    # Combined verdict — a HIGH email-header flag escalates to BLOCKED
+    # Layer 3 — vendor bank-account history (hashed ledger; change-detection).
+    # Returns None for documents without an IBAN (e.g. a Bill of Lading).
+    bank = check_vendor_iban(entry.get("invoice", {}).get("vendor", ""),
+                             entry["payload"].get("iban", ""))
+
+    # Combined verdict — a HIGH email-header flag or a bank-account change escalates to BLOCKED
     verdict = telemetry.get("verdict", "REVIEW")
     risk = float(telemetry.get("risk_score", 0.0))
     if vec["risk"] == "HIGH":
@@ -259,10 +265,18 @@ async def mailbox_check(req: CheckRequest):
     elif vec["risk"] in ("MEDIUM", "LOW") and verdict == "CLEAR":
         verdict = "REVIEW"
         risk = max(risk, 0.3)
+    if bank:
+        if bank["status"] == "FAIL":
+            verdict = "BLOCKED"
+            risk = max(risk, float(bank.get("risk", 1.0)))
+        elif bank["status"] == "WARN" and verdict == "CLEAR":
+            verdict = "REVIEW"
+            risk = max(risk, 0.3)
 
     return JSONResponse({
         "id": entry["id"],
         "verdict": verdict,
+        "bank": bank,
         "risk_score": round(risk, 2),
         "vec": vec,
         "telemetry": telemetry,

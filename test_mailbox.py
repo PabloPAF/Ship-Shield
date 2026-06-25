@@ -47,7 +47,7 @@ def test_mailbox_page_served():
     r = client.get("/mailbox")
     assert r.status_code == 200
     assert "ShipShield" in r.text
-    assert "Cross-check facts" in r.text
+    assert "Ship-Shield" in r.text          # cross-check button label
 
 
 def test_bol_scanner_still_served():
@@ -96,3 +96,22 @@ def test_clean_emails_pass_all_checks():
 
 def test_unknown_email_id_returns_404():
     assert client.post("/mailbox/check", json={"id": "does-not-exist"}).status_code == 404
+
+
+# ── Layer 3: vendor bank-account change-detection (hashed ledger) ────────────
+
+def test_vec_email_flags_new_bank_account():
+    data = client.post("/mailbox/check", json={"id": "vec"}).json()
+    assert data["bank"]["status"] == "FAIL"          # new account for known vendor
+    assert data["verdict"] == "BLOCKED"
+
+def test_clean_invoice_matches_confirmed_account():
+    data = client.post("/mailbox/check", json={"id": "clean1"}).json()
+    assert data["bank"]["status"] == "PASS"
+    assert "****" in data["bank"]["masked"]            # IBAN is masked, never raw
+
+def test_ledger_stores_no_raw_ibans():
+    import json, pathlib
+    raw = pathlib.Path("vendor_ledger.json").read_text()
+    for iban in ("NL91ABNA0417164300", "DE89370400440532013000", "ES9121000418450200051332"):
+        assert iban not in raw                         # only peppered hashes are stored

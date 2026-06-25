@@ -1,0 +1,35 @@
+{
+  "atlantic shipping bv": {
+    "display_name": "Atlantic Shipping BV",
+    "ibans": {
+      "7e6bc076f9780395a66893723b9b9274f6101ab6bebd2dc2d4699940ee8b3476": {
+        "confirmed": true,
+        "country": "NL",
+        "first_seen": "2026-06-25",
+        "last_seen": "2026-06-25"
+      }
+    }
+  },
+  "nordic freight gmbh": {
+    "display_name": "Nordic Freight GmbH",
+    "ibans": {
+      "ac86c628f2242ac3b80c1ad287da8b2c09daa182d355a729c88addc0291e54f2": {
+        "confirmed": true,
+        "country": "DE",
+        "first_seen": "2026-06-25",
+        "last_seen": "2026-06-25"
+      }
+    }
+  },
+  "iberian cargo sl": {
+    "display_name": "Iberian Cargo SL",
+    "ibans": {
+      "653ea642f63210b05fef918c2a421a618f0059a71f6d589b35f021048d17ab0b": {
+        "confirmed": true,
+        "country": "ES",
+        "first_seen": "2026-06-25",
+        "last_seen": "2026-06-25"
+      }
+    }
+  }
+}

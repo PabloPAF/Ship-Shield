@@ -211,6 +211,9 @@ function showPanel(e,d){
         <div class="cd">Sender domain, reply-to and subject line show no Vendor Email Compromise indicators.</div></div></div>`;
   const telHtml=tel.checks.map(c=>`<div class="check"><span class="st ${c.status}">${c.status}</span>
       <div><div class="cf">${c.field}</div><div class="cd">${c.detail}</div></div></div>`).join("");
+  const bankHtml=d.bank?`<div class="seg">Layer 3 — Vendor bank-account history</div>
+      <div class="check"><span class="st ${d.bank.status}">${d.bank.status}</span>
+      <div><div class="cf">${d.bank.field}</div><div class="cd">${d.bank.detail}</div></div></div>`:"";
   const vessel=tel.vessel_name?`<div class="vesselcard"><div><b>${tel.vessel_name}</b> · ${tel.carrier}</div>
       <div>MMSI ${e.payload.mmsi} · last AIS dock: <b>${tel.dock_date}</b></div></div>`:"";
   document.getElementById("pbody").innerHTML=`
@@ -221,7 +224,8 @@ function showPanel(e,d){
     ${vessel}
     <div class="seg">Layer 1 — Email header analysis (VEC)</div>${vecHtml}
     <div class="seg">Layer 2 — Physical telemetry validation</div>${telHtml}
-    <div class="src">Source: ${(tel.source||"").replace(/_/g," ")} · ${tel.checks.length} telemetry checks, ${vec.flags.length} header flags · engine: telemetry_validator.py + email_ingestor.py</div>`;
+    ${bankHtml}
+    <div class="src">Source: ${(tel.source||"").replace(/_/g," ")} · ${tel.checks.length} telemetry checks, ${vec.flags.length} header flags · engine: telemetry_validator.py + email_ingestor.py + vendor_ledger.py</div>`;
   document.getElementById("panel").classList.add("open");
   document.getElementById("overlay").classList.add("show");
 }
