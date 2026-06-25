@@ -48,6 +48,50 @@
     "doc_type": "invoice"
   },
   {
+    "id": "hygiene",
+    "file": "11_active_content_pdf.eml",
+    "color": "#a4262c",
+    "unread": true,
+    "time": "Fri 09:50",
+    "from": "billing@atlantic-shipping.com",
+    "reply_to": null,
+    "to": "ap@acme-logistics.com",
+    "subject": "Invoice INV-2026-1099 \u2014 Atlantic Explorer \u2014 Port of Rotterdam",
+    "date": "Fri, 19 Jun 2026 09:50:00 +0100",
+    "body": "Dear Accounts Payable,\n\nPlease find attached invoice INV-2026-1099 for container discharge at Port of Rotterdam.\nVessel: Atlantic Explorer (MMSI 244170218) - Voyage VOY-2026-1099.\n\nAtlantic Shipping BV - Billing Department\n",
+    "doc_type": "invoice",
+    "invoice": {
+      "number": "INV-2026-1099",
+      "vendor": "Atlantic Shipping BV",
+      "vessel": "Atlantic Explorer",
+      "port": "Port of Rotterdam",
+      "date": "2026-06-20",
+      "currency": "EUR",
+      "total": "31,800.00",
+      "items": [
+        [
+          "Ocean freight - Rotterdam discharge",
+          "EUR 27,500.00"
+        ],
+        [
+          "THC & documentation",
+          "EUR 4,300.00"
+        ]
+      ],
+      "iban": "NL91 ABNA 0417 1643 00"
+    },
+    "payload": {
+      "mmsi": "244170218",
+      "discharge_port": "Port of Rotterdam",
+      "invoice_date": "2026-06-20",
+      "submission_date": "2026-06-21",
+      "iban": "NL91ABNA0417164300",
+      "cargo_type": "container",
+      "voyage_id": "VOY-2026-1099",
+      "cargo_quantity_mt": 12000
+    }
+  },
+  {
     "id": "clean1",
     "file": "02_clean_atlantic.eml",
     "color": "#0078d4",

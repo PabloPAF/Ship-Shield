@@ -233,6 +233,9 @@ function showPanel(e,d){
   const bankHtml=d.bank?`<div class="seg">Layer 3 — Vendor bank-account history</div>
       <div class="check"><span class="st ${d.bank.status}">${d.bank.status}</span>
       <div><div class="cf">${d.bank.field}</div><div class="cd">${d.bank.detail}</div></div></div>`:"";
+  const hygHtml=d.hygiene?`<div class="seg">Layer 0 — Document hygiene</div>
+      <div class="check"><span class="st ${d.hygiene.status}">${d.hygiene.status}</span>
+      <div><div class="cf">attachment_scan</div><div class="cd">${d.hygiene.detail}</div></div></div>`:"";
   const vessel=tel.vessel_name?`<div class="vesselcard"><div><b>${tel.vessel_name}</b> · ${tel.carrier}</div>
       <div>MMSI ${e.payload.mmsi} · last AIS dock: <b>${tel.dock_date}</b></div></div>`:"";
   document.getElementById("pbody").innerHTML=`
@@ -241,6 +244,7 @@ function showPanel(e,d){
       <div class="risk">Risk score: <b>${d.risk_score.toFixed(2)}</b>
         <div class="riskbar"><i style="width:${d.risk_score*100}%;background:${riskColor}"></i></div></div></div>
     ${vessel}
+    ${hygHtml}
     <div class="seg">Layer 1 — Email header analysis (VEC)</div>${vecHtml}
     <div class="seg">Layer 2 — Physical telemetry validation</div>${telHtml}
     ${bankHtml}

@@ -1,0 +1,35 @@
+Content-Type: multipart/mixed; boundary="===============4835776492776158062=="
+MIME-Version: 1.0
+From: billing@atlantic-shipping.com
+To: ap@acme-logistics.com
+Subject: =?utf-8?q?Invoice_INV-2026-1099_=E2=80=94_Atlantic_Explorer_?=
+ =?utf-8?q?=E2=80=94_Port_of_Rotterdam?=
+Date: Fri, 19 Jun 2026 09:50:00 +0100
+
+--===============4835776492776158062==
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+
+Dear Accounts Payable,
+
+Please find attached invoice INV-2026-1099 for container discharge at Port of Rotterdam.
+Vessel: Atlantic Explorer (MMSI 244170218) - Voyage VOY-2026-1099.
+
+Atlantic Shipping BV - Billing Department
+
+--===============4835776492776158062==
+Content-Type: application/pdf
+MIME-Version: 1.0
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="INV-2026-1099.pdf"
+
+JVBERi0xLjQKMSAwIG9iaiA8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgL09wZW5BY3Rp
+b24gNCAwIFIgPj4gZW5kb2JqCjIgMCBvYmogPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0g
+L0NvdW50IDEgPj4gZW5kb2JqCjMgMCBvYmogPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAv
+TWVkaWFCb3ggWzAgMCAzMDAgMTQ0XSA+PiBlbmRvYmoKNCAwIG9iaiA8PCAvVHlwZSAvQWN0aW9u
+IC9TIC9KYXZhU2NyaXB0IC9KUyAoYXBwLmFsZXJ0XCgnU2hpcFNoaWVsZCBkZW1vOiB0aGlzIGF0
+dGFjaG1lbnQgY2FycmllcyBhY3RpdmUgY29udGVudCdcKTspID4+IGVuZG9iagp0cmFpbGVyIDw8
+IC9Sb290IDEgMCBSID4+CiUlRU9GCg==
+
+--===============4835776492776158062==--

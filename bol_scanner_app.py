@@ -29,6 +29,7 @@ from PIL import Image, ImageEnhance
 from telemetry_validator import telemetry_context_validation
 from email_ingestor import ingest_eml
 from vendor_ledger import check_vendor_iban
+from document_hygiene import scan_attachments
 
 # ── Constants ──────────────────────────────────────────────────────────────
 
@@ -240,6 +241,10 @@ async def mailbox_check(req: CheckRequest):
         raise HTTPException(status_code=422, detail=f"Email parsing failed: {e}")
     vec = {"risk": ingested.get("vec_risk", "UNKNOWN"), "flags": ingested.get("vec_flags", [])}
 
+    # Layer 0 — document hygiene: scan attachments for active/hidden content
+    # BEFORE trusting the document. A FAIL means quarantine.
+    hygiene = scan_attachments(ingested.get("attachments", []))
+
     # Layer 2 — physical telemetry validation with the real engine
     mt_key = _read_secret("MARINETRAFFIC_API_KEY")
     ais_key = _read_secret("AISSTREAM_API_KEY")
@@ -272,10 +277,18 @@ async def mailbox_check(req: CheckRequest):
         elif bank["status"] == "WARN" and verdict == "CLEAR":
             verdict = "REVIEW"
             risk = max(risk, 0.3)
+    if hygiene:
+        if hygiene["status"] == "FAIL":
+            verdict = "BLOCKED"
+            risk = max(risk, 1.0)
+        elif hygiene["status"] == "WARN" and verdict == "CLEAR":
+            verdict = "REVIEW"
+            risk = max(risk, 0.3)
 
     return JSONResponse({
         "id": entry["id"],
         "verdict": verdict,
+        "hygiene": hygiene,
         "bank": bank,
         "risk_score": round(risk, 2),
         "vec": vec,

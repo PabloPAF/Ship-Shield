@@ -32,6 +32,7 @@ EXPECTED_VERDICT = {
     "postdate": "BLOCKED",  # invoice 12 days off dock date (Case A)
     "bol_clean": "CLEAR",   # Bill of Lading — Baltic Carrier / Hamburg, all matches
     "bol_forged": "BLOCKED",# Bill of Lading — claims Felixstowe, registry says Rotterdam
+    "hygiene": "BLOCKED",   # clean invoice, but the attached PDF carries active content (Layer 0)
 }
 
 # The single telemetry check expected to FAIL for each fraud scenario.
@@ -62,7 +63,7 @@ def test_inbox_manifest_has_all_emails():
     r = client.get("/mailbox/emails")
     assert r.status_code == 200
     emails = r.json()
-    assert len(emails) == 10
+    assert len(emails) == 11
     assert {e["id"] for e in emails} == set(EXPECTED_VERDICT)
     for e in emails:
         assert e["invoice"]["number"]
@@ -109,6 +110,31 @@ def test_clean_emails_pass_all_checks():
 
 def test_unknown_email_id_returns_404():
     assert client.post("/mailbox/check", json={"id": "does-not-exist"}).status_code == 404
+
+
+# ── Layer 0: document hygiene (active/hidden content in attachments) ─────────
+
+def test_active_content_pdf_is_quarantined():
+    data = client.post("/mailbox/check", json={"id": "hygiene"}).json()
+    assert data["hygiene"]["status"] == "FAIL"
+    assert data["verdict"] == "BLOCKED"
+
+def test_clean_pdf_attachments_pass_hygiene():
+    for eid in ("clean1", "clean2", "bol_clean"):
+        data = client.post("/mailbox/check", json={"id": eid}).json()
+        assert data["hygiene"]["status"] == "CLEAN"
+
+def test_hygiene_scanner_unit():
+    from document_hygiene import scan_attachment
+    import io, zipfile
+    active = b"%PDF-1.4\n1 0 obj<< /OpenAction << /S /JavaScript /JS (x) >> >>endobj\n%%EOF"
+    assert scan_attachment("a.pdf", "application/pdf", active)["status"] == "FAIL"
+    benign = b"%PDF-1.4\n1 0 obj<< /Type /Catalog >>endobj\n%%EOF"
+    assert scan_attachment("a.pdf", "application/pdf", benign)["status"] == "CLEAN"
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("word/vbaProject.bin", b"\x00")
+    assert scan_attachment("m.docm", "application/octet-stream", buf.getvalue())["status"] == "FAIL"
 
 
 # ── Layer 3: vendor bank-account change-detection (hashed ledger) ────────────
