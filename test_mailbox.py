@@ -179,6 +179,18 @@ def test_account_registry_stores_no_raw_ibans():
         assert iban not in raw
 
 
+# ── Security: renderer must HTML-escape all attacker-controlled content ──────
+
+def test_renderer_escapes_dynamic_content():
+    import pathlib
+    html = pathlib.Path("templates/mailbox.html").read_text()
+    assert "const esc=" in html
+    # these attacker-controlled fields must never be interpolated unescaped
+    for raw in ("${e.subject}", "${inv.vendor}", "${inv.iban}", "${c.detail}",
+                "${d.bank_vop.detail}", "${b.shipper}", "${senderName(e.from)}"):
+        assert raw not in html, f"unescaped interpolation left in template: {raw}"
+
+
 # ── Layer 0: document hygiene (active/hidden content in attachments) ─────────
 
 def test_active_content_pdf_is_quarantined():

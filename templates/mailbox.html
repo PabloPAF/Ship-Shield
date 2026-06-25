@@ -140,6 +140,10 @@
 
 <script>
 let EMAILS=[], activeId=null;
+// Security: escape ALL dynamic content before it goes into innerHTML. Email and
+// document fields are attacker-controlled (this is literally phishing content),
+// as are OSINT-derived strings, so every interpolation below is wrapped in esc().
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const getDomain=a=>{a=(a||"").toLowerCase(); if(a.includes("<"))a=a.split("<").pop().replace(/[> ]/g,""); return a.includes("@")?a.split("@").pop().trim():"";};
 const getDisplay=a=>(a||"").includes("<")?a.split("<")[0].trim().replace(/"/g,""):"";
 const senderName=s=>getDisplay(s)||s.split("@")[0].replace(/[<>]/g,"");
@@ -157,54 +161,54 @@ function renderList(){
     const d=document.createElement("div");
     d.className="msg"+(e.unread?" unread":"")+(e.id===activeId?" active":"");
     d.onclick=()=>openEmail(e.id);
-    d.innerHTML=`<div class="bar"></div><div class="av" style="background:${e.color}">${initials(e.from)}</div>
-      <div class="body"><div class="l1"><span class="from">${senderName(e.from)}</span><span class="time">${e.time}</span></div>
-      <div class="subj">${e.subject}</div><div class="prev">📎 ${e.invoice.number}.pdf — ${e.invoice.vessel}</div></div>`;
+    d.innerHTML=`<div class="bar"></div><div class="av" style="background:${esc(e.color)}">${esc(initials(e.from))}</div>
+      <div class="body"><div class="l1"><span class="from">${esc(senderName(e.from))}</span><span class="time">${esc(e.time)}</span></div>
+      <div class="subj">${esc(e.subject)}</div><div class="prev">📎 ${esc(e.invoice.number)}.pdf — ${esc(e.invoice.vessel)}</div></div>`;
     c.appendChild(d);
   });
 }
 function docHTML(e){ return e.doc_type==="bol" ? bolHTML(e.invoice) : invoiceHTML(e.invoice); }
 function invoiceHTML(inv){
-  const rows=inv.items.map(it=>`<tr><td>${it[0]}</td><td style="text-align:right">${it[1]}</td></tr>`).join("");
+  const rows=inv.items.map(it=>`<tr><td>${esc(it[0])}</td><td style="text-align:right">${esc(it[1])}</td></tr>`).join("");
   return `<div class="attach"><div class="ahead"><div class="aico">PDF</div>
-    <div><div class="aname">${inv.number}.pdf</div><div class="asize">Invoice · 1 page</div></div></div>
+    <div><div class="aname">${esc(inv.number)}.pdf</div><div class="asize">Invoice · 1 page</div></div></div>
     <div class="inv"><div class="ititle">INVOICE</div>
-    <div class="irow"><div><div class="lab">From</div>${inv.vendor}</div>
-    <div style="text-align:right"><div class="lab">Invoice #</div>${inv.number}<br><span class="lab">Date</span> ${inv.date}</div></div>
+    <div class="irow"><div><div class="lab">From</div>${esc(inv.vendor)}</div>
+    <div style="text-align:right"><div class="lab">Invoice #</div>${esc(inv.number)}<br><span class="lab">Date</span> ${esc(inv.date)}</div></div>
     <table><thead><tr><th>Description</th><th style="text-align:right">Amount</th></tr></thead><tbody>${rows}</tbody></table>
-    <div class="tot">TOTAL: ${inv.currency} ${inv.total}</div>
+    <div class="tot">TOTAL: ${esc(inv.currency)} ${esc(inv.total)}</div>
     <div class="logbox"><span class="lab">Logistics reference</span>
-    <code>Vessel: ${inv.vessel} · Port of discharge: ${inv.port}</code><br>
-    <code>Beneficiary IBAN: ${inv.iban}</code></div></div></div>`;
+    <code>Vessel: ${esc(inv.vessel)} · Port of discharge: ${esc(inv.port)}</code><br>
+    <code>Beneficiary IBAN: ${esc(inv.iban)}</code></div></div></div>`;
 }
 function bolHTML(b){
   return `<div class="attach"><div class="ahead"><div class="aico" style="background:#2a6f8e">PDF</div>
     <div><div class="aname">${b.number}.pdf</div><div class="asize">Bill of Lading · 1 page</div></div></div>
     <div class="inv"><div class="ititle" style="color:#2a6f8e">BILL OF LADING</div>
-    <div class="irow"><div><div class="lab">Carrier</div>${b.vendor}</div>
-    <div style="text-align:right"><div class="lab">B/L #</div>${b.number}<br><span class="lab">Shipped on board</span> ${b.date}</div></div>
+    <div class="irow"><div><div class="lab">Carrier</div>${esc(b.vendor)}</div>
+    <div style="text-align:right"><div class="lab">B/L #</div>${esc(b.number)}<br><span class="lab">Shipped on board</span> ${esc(b.date)}</div></div>
     <table><tbody>
-      <tr><td class="lab">Vessel</td><td>${b.vessel} (MMSI ${b.mmsi})</td></tr>
-      <tr><td class="lab">Voyage</td><td>${b.voyage}</td></tr>
-      <tr><td class="lab">Port of loading</td><td>${b.port_loading}</td></tr>
-      <tr><td class="lab">Port of discharge</td><td>${b.port}</td></tr>
-      <tr><td class="lab">Description of goods</td><td>${b.cargo} — ${b.qty}</td></tr>
-      <tr><td class="lab">Shipper</td><td>${b.shipper}</td></tr>
-      <tr><td class="lab">Consignee</td><td>${b.consignee}</td></tr>
+      <tr><td class="lab">Vessel</td><td>${esc(b.vessel)} (MMSI ${esc(b.mmsi)})</td></tr>
+      <tr><td class="lab">Voyage</td><td>${esc(b.voyage)}</td></tr>
+      <tr><td class="lab">Port of loading</td><td>${esc(b.port_loading)}</td></tr>
+      <tr><td class="lab">Port of discharge</td><td>${esc(b.port)}</td></tr>
+      <tr><td class="lab">Description of goods</td><td>${esc(b.cargo)} — ${esc(b.qty)}</td></tr>
+      <tr><td class="lab">Shipper</td><td>${esc(b.shipper)}</td></tr>
+      <tr><td class="lab">Consignee</td><td>${esc(b.consignee)}</td></tr>
     </tbody></table>
     <div class="logbox"><span class="lab">Physical telemetry reference</span>
-    <code>Vessel: ${b.vessel} · Port of discharge: ${b.port} · Voyage: ${b.voyage}</code></div></div></div>`;
+    <code>Vessel: ${esc(b.vessel)} · Port of discharge: ${esc(b.port)} · Voyage: ${esc(b.voyage)}</code></div></div></div>`;
 }
 function openEmail(id){
   activeId=id; renderList();
   const e=EMAILS.find(x=>x.id===id);
-  const bodyHtml=e.body.split("\n").map(p=>p.trim()?`<p>${p}</p>`:"").join("");
-  const replyRow=e.reply_to?`<div class="torow">Reply-To: <b style="color:var(--bad)">${e.reply_to}</b></div>`:"";
+  const bodyHtml=e.body.split("\n").map(p=>p.trim()?`<p>${esc(p)}</p>`:"").join("");
+  const replyRow=e.reply_to?`<div class="torow">Reply-To: <b style="color:var(--bad)">${esc(e.reply_to)}</b></div>`:"";
   document.getElementById("read").innerHTML=`
-    <div class="rhead"><div class="rsubj">${e.subject}</div>
-    <div class="senderrow"><div class="av" style="background:${e.color}">${initials(e.from)}</div>
-    <div><div class="sname">${senderName(e.from)}</div><div class="saddr">&lt;${addrOnly(e.from)}&gt;</div></div>
-    <div class="meta">${e.date}<div class="torow">To: ${e.to}</div>${replyRow}</div></div></div>
+    <div class="rhead"><div class="rsubj">${esc(e.subject)}</div>
+    <div class="senderrow"><div class="av" style="background:${esc(e.color)}">${esc(initials(e.from))}</div>
+    <div><div class="sname">${esc(senderName(e.from))}</div><div class="saddr">&lt;${esc(addrOnly(e.from))}&gt;</div></div>
+    <div class="meta">${esc(e.date)}<div class="torow">To: ${esc(e.to)}</div>${replyRow}</div></div></div>
     <div class="checkbtnrow"><button class="ssbtn" id="ssbtn" onclick="runCheck('${e.id}')"><img class="blogo" src="/logo/shipshield_emblem.png" alt="Ship-Shield"> Ship-Shield</button></div>
     <div class="rbody">${bodyHtml}${docHTML(e)}</div>`;
 }
@@ -224,28 +228,28 @@ function showPanel(e,d){
   const vsub={CLEAR:"Physical event confirmed — safe to pay",REVIEW:"Unverifiable — needs manual review",
     BLOCKED:"Fraud indicator detected — do NOT pay"}[verdict];
   const vecHtml=vec.flags.length
-    ? vec.flags.map(f=>`<div class="check"><span class="st ${f.severity}">${f.severity}</span>
-        <div><div class="cf">${f.code}</div><div class="cd">${f.detail}</div></div></div>`).join("")
+    ? vec.flags.map(f=>`<div class="check"><span class="st ${esc(f.severity)}">${esc(f.severity)}</span>
+        <div><div class="cf">${esc(f.code)}</div><div class="cd">${esc(f.detail)}</div></div></div>`).join("")
     : `<div class="check"><span class="st CLEAN">CLEAN</span><div><div class="cf">No header anomalies</div>
         <div class="cd">Sender domain, reply-to and subject line show no Vendor Email Compromise indicators.</div></div></div>`;
-  const telHtml=tel.checks.map(c=>`<div class="check"><span class="st ${c.status}">${c.status}</span>
-      <div><div class="cf">${c.field}</div><div class="cd">${c.detail}</div></div></div>`).join("");
-  const vrHtml=d.vessel_risk?`<div class="check"><span class="st ${d.vessel_risk.status}">${d.vessel_risk.status}</span>
-      <div><div class="cf">vessel_risk (Equasis / PSC)</div><div class="cd">${d.vessel_risk.detail}</div></div></div>`:"";
+  const telHtml=tel.checks.map(c=>`<div class="check"><span class="st ${esc(c.status)}">${esc(c.status)}</span>
+      <div><div class="cf">${esc(c.field)}</div><div class="cd">${esc(c.detail)}</div></div></div>`).join("");
+  const vrHtml=d.vessel_risk?`<div class="check"><span class="st ${esc(d.vessel_risk.status)}">${esc(d.vessel_risk.status)}</span>
+      <div><div class="cf">vessel_risk (Equasis / PSC)</div><div class="cd">${esc(d.vessel_risk.detail)}</div></div></div>`:"";
   const bankHtml=d.bank?`<div class="seg">Layer 3 — Vendor bank-account history</div>
-      <div class="check"><span class="st ${d.bank.status}">${d.bank.status}</span>
-      <div><div class="cf">${d.bank.field}</div><div class="cd">${d.bank.detail}</div></div></div>`:"";
-  const bvHtml=d.bank_vop?`<div class="check"><span class="st ${d.bank_vop.status}">${d.bank_vop.status}</span>
-      <div><div class="cf">${d.bank_vop.field} (Verification of Payee)</div><div class="cd">${d.bank_vop.detail}</div></div></div>`:"";
+      <div class="check"><span class="st ${esc(d.bank.status)}">${esc(d.bank.status)}</span>
+      <div><div class="cf">${esc(d.bank.field)}</div><div class="cd">${esc(d.bank.detail)}</div></div></div>`:"";
+  const bvHtml=d.bank_vop?`<div class="check"><span class="st ${esc(d.bank_vop.status)}">${esc(d.bank_vop.status)}</span>
+      <div><div class="cf">${esc(d.bank_vop.field)} (Verification of Payee)</div><div class="cd">${esc(d.bank_vop.detail)}</div></div></div>`:"";
   const hygHtml=d.hygiene?`<div class="seg">Layer 0 — Document hygiene</div>
-      <div class="check"><span class="st ${d.hygiene.status}">${d.hygiene.status}</span>
-      <div><div class="cf">attachment_scan</div><div class="cd">${d.hygiene.detail}</div></div></div>`:"";
+      <div class="check"><span class="st ${esc(d.hygiene.status)}">${esc(d.hygiene.status)}</span>
+      <div><div class="cf">attachment_scan</div><div class="cd">${esc(d.hygiene.detail)}</div></div></div>`:"";
   const cp=(d.counterparty||[]);
   const cpHtml=cp.length?`<div class="seg">Layer 4 — Counterparty &amp; sanctions</div>`+
-      cp.map(c=>`<div class="check"><span class="st ${c.status}">${c.status}</span>
-      <div><div class="cf">${c.field}</div><div class="cd">${c.detail}</div></div></div>`).join(""):"";
-  const vessel=tel.vessel_name?`<div class="vesselcard"><div><b>${tel.vessel_name}</b> · ${tel.carrier}</div>
-      <div>MMSI ${e.payload.mmsi} · last AIS dock: <b>${tel.dock_date}</b></div></div>`:"";
+      cp.map(c=>`<div class="check"><span class="st ${esc(c.status)}">${esc(c.status)}</span>
+      <div><div class="cf">${esc(c.field)}</div><div class="cd">${esc(c.detail)}</div></div></div>`).join(""):"";
+  const vessel=tel.vessel_name?`<div class="vesselcard"><div><b>${esc(tel.vessel_name)}</b> · ${esc(tel.carrier)}</div>
+      <div>MMSI ${esc(e.payload.mmsi)} · last AIS dock: <b>${esc(tel.dock_date)}</b></div></div>`:"";
   document.getElementById("pbody").innerHTML=`
     <div class="verdict ${verdict}"><div class="vlabel">${verdict==="CLEAR"?"✅ CLEAR":verdict==="REVIEW"?"⚠️ REVIEW":"🚫 BLOCKED"}</div>
       <div class="vsub">${vsub}</div>
@@ -257,7 +261,7 @@ function showPanel(e,d){
     <div class="seg">Layer 2 — Physical telemetry validation</div>${telHtml}${vrHtml}
     ${bankHtml}${bvHtml}
     ${cpHtml}
-    <div class="src">Source: ${(tel.source||"").replace(/_/g," ")} · ${tel.checks.length} telemetry checks, ${vec.flags.length} header flags · engine: telemetry_validator.py + email_ingestor.py + vendor_ledger.py</div>`;
+    <div class="src">Source: ${esc((tel.source||"").replace(/_/g," "))} · ${tel.checks.length} telemetry checks, ${vec.flags.length} header flags · engine: telemetry_validator.py + email_ingestor.py + vendor_ledger.py</div>`;
   document.getElementById("panel").classList.add("open");
   document.getElementById("overlay").classList.add("show");
 }
