@@ -4,9 +4,6 @@ A maritime logistics invoice fraud detection system that combines AI-powered doc
 
 ShipShield is built on top of the open-source SmartInvoiceAI invoice parser (credited under License), extended with a maritime telemetry validation layer and an Accounts Payable mailbox.
 
-**Run locally:** `uvicorn bl_scanner_app:app --reload --port 8502` → B/L scanner at
-`http://localhost:8502/`, Accounts Payable mailbox at `http://localhost:8502/mailbox`.
-Works fully offline against bundled mock data — no API keys required for the demo.
 
 ---
 

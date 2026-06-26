@@ -22,6 +22,14 @@
   .topbar a{color:#fff; text-decoration:none; font-size:13px; opacity:.9;}
   .topbar a:hover{opacity:1; text-decoration:underline;}
   .topbar .avatar{width:30px; height:30px; border-radius:50%; background:#5c2d91; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:13px;}
+  .topbar .org{font-size:13px; opacity:.9; padding-left:4px; border-left:1px solid rgba(255,255,255,.35); margin-left:2px; padding-left:12px;}
+  .topbar .acct{text-align:right; line-height:1.15; margin-right:2px;}
+  .topbar .acctname{font-size:12px; font-weight:600;}
+  .topbar .acctmail{font-size:10px; opacity:.85;}
+  .mbxowner{display:flex; align-items:center; gap:8px; padding:4px 12px 12px;}
+  .mbxowner .avatar2{width:30px; height:30px; border-radius:50%; background:#5c2d91; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:12px; flex-shrink:0;}
+  .mbxname{font-size:13px; font-weight:600; color:var(--ms-dark);}
+  .mbxmail{font-size:11px; color:var(--ms-grey);}
   .app{display:flex; height:calc(100vh - 48px);}
   .nav{width:200px; background:#f3f2f1; border-right:1px solid var(--ms-line); padding:12px 0; flex-shrink:0; overflow:auto;}
   .newmail{margin:0 12px 12px; background:#fff; border:1px solid var(--ms-line); border-radius:4px; padding:7px 10px; font-weight:600; color:var(--ms-blue); display:flex; align-items:center; gap:8px;}
@@ -111,16 +119,30 @@
 <body>
   <div class="topbar">
     <span class="waffle">▦</span><span class="appname">Outlook</span>
-    <div class="search">🔍&nbsp; Search</div>
-    <div class="right"><a href="/">🚢 B/L Scanner</a><span>⚙</span><div class="avatar">AP</div></div>
+    <span class="org">SuccessfulMockMaritimeCarrier</span>
+    <div class="search">🔍&nbsp; Search mail</div>
+    <div class="right">
+      <a href="/">🚢 B/L Scanner</a><span>⚙</span><span>❓</span>
+      <div class="acct">
+        <div class="acctname">Accounts Payable</div>
+        <div class="acctmail">accountspayable@successfulmockmaritimecarrier.com</div>
+      </div>
+      <div class="avatar" title="Accounts Payable — SuccessfulMockMaritimeCarrier">AP</div>
+    </div>
   </div>
   <div class="app">
     <div class="nav">
+      <div class="mbxowner">
+        <div class="avatar2">AP</div>
+        <div><div class="mbxname">Accounts Payable</div>
+          <div class="mbxmail">SuccessfulMockMaritimeCarrier</div></div>
+      </div>
       <div class="newmail">✉&nbsp; New mail</div>
       <div class="folder active">📥 Inbox <span class="count" id="inboxCount"></span></div>
       <div class="folder">📤 Sent Items</div><div class="folder">📝 Drafts</div>
       <div class="folder">🗑 Deleted Items</div><div class="folder">⚠ Junk Email</div>
-      <div class="hd">ShipShield</div>
+      <div class="folder">📁 Archive</div>
+      <div class="hd">ShipShield add-in</div>
       <div class="folder">🛡 Verified</div><div class="folder">🚫 Blocked</div>
     </div>
     <div class="list">
