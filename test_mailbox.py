@@ -5,18 +5,18 @@ Run:
     pip install -r requirements.txt pytest httpx
     pytest test_mailbox.py -v
 
-These exercise the FastAPI routes added to bol_scanner_app.py:
+These exercise the FastAPI routes added to bl_scanner_app.py:
     GET  /mailbox          → serves the Outlook-style inbox
     GET  /mailbox/emails   → inbox.json manifest (8 demo scenarios)
     POST /mailbox/check     → Layer 1 (VEC headers) + Layer 2 (telemetry)
 
 No API keys required: telemetry runs in mock mode against maritime_registry.json.
-Requires Python 3.11+ (bol_scanner_app imports the stdlib `tomllib`).
+Requires Python 3.11+ (bl_scanner_app imports the stdlib `tomllib`).
 """
 import pytest
 from fastapi.testclient import TestClient
 
-from bol_scanner_app import app
+from bl_scanner_app import app
 
 client = TestClient(app)
 
@@ -30,8 +30,8 @@ EXPECTED_VERDICT = {
     "dwt": "BLOCKED",       # 50,000 MT > 45,000 DWT (Case C)
     "dup": "BLOCKED",       # voyage already invoiced (Case B)
     "postdate": "BLOCKED",  # invoice 12 days off dock date (Case A)
-    "bol_clean": "CLEAR",   # Bill of Lading — Baltic Carrier / Hamburg, all matches
-    "bol_forged": "BLOCKED",# Bill of Lading — claims Felixstowe, registry says Rotterdam
+    "bl_clean": "CLEAR",   # Bill of Lading — Baltic Carrier / Hamburg, all matches
+    "bl_forged": "BLOCKED",# Bill of Lading — claims Felixstowe, registry says Rotterdam
     "hygiene": "BLOCKED",   # clean invoice, but the attached PDF carries active content (Layer 0)
     "sanctioned": "BLOCKED",# clean telemetry, but vessel/carrier is sanctioned (Layer 4)
     "vessel_risk": "REVIEW", # clean telemetry, but vessel has PSC detentions (Layer 2 enrichment)
@@ -46,7 +46,7 @@ EXPECTED_FAIL_FIELD = {
     "dup": "voyage_id",
     "postdate": "invoice_date",
     "vec": "iban",
-    "bol_forged": "discharge_port",
+    "bl_forged": "discharge_port",
 }
 
 
@@ -57,7 +57,7 @@ def test_mailbox_page_served():
     assert "Ship-Shield" in r.text          # cross-check button label
 
 
-def test_bol_scanner_still_served():
+def test_bl_scanner_still_served():
     # the original route must remain intact
     assert client.get("/").status_code == 200
 
@@ -73,13 +73,13 @@ def test_inbox_manifest_has_all_emails():
         assert e["payload"]["mmsi"]
 
 
-def test_bol_documents_present_and_have_no_iban():
+def test_bl_documents_present_and_have_no_iban():
     emails = {e["id"]: e for e in client.get("/mailbox/emails").json()}
-    for bid in ("bol_clean", "bol_forged"):
-        assert emails[bid]["doc_type"] == "bol"
-        assert "iban" not in emails[bid]["payload"]        # a BOL carries no payment detail
-    # BOL cross-check runs telemetry but skips the bank layer
-    data = client.post("/mailbox/check", json={"id": "bol_clean"}).json()
+    for bid in ("bl_clean", "bl_forged"):
+        assert emails[bid]["doc_type"] == "bl"
+        assert "iban" not in emails[bid]["payload"]        # a B/L carries no payment detail
+    # B/L cross-check runs telemetry but skips the bank layer
+    data = client.post("/mailbox/check", json={"id": "bl_clean"}).json()
     assert data["bank"] is None
 
 
@@ -127,7 +127,7 @@ def test_sanctioned_vessel_blocked():
     assert data["verdict"] == "BLOCKED"
 
 def test_clean_emails_pass_sanctions():
-    for eid in ("clean1", "clean2", "bol_clean"):
+    for eid in ("clean1", "clean2", "bl_clean"):
         s = _counterparty(client.post("/mailbox/check", json={"id": eid}).json(), "sanctions")
         assert s and s["status"] == "PASS"
 
@@ -140,7 +140,7 @@ def test_detained_vessel_review():
     assert data["verdict"] == "REVIEW"
 
 def test_clean_vessels_pass_risk():
-    for eid in ("clean1", "clean2", "bol_clean"):
+    for eid in ("clean1", "clean2", "bl_clean"):
         assert client.post("/mailbox/check", json={"id": eid}).json()["vessel_risk"]["status"] == "PASS"
 
 
@@ -153,7 +153,7 @@ def test_dissolved_vendor_blocked():
     assert data["verdict"] == "BLOCKED"
 
 def test_clean_vendors_pass_entity():
-    for eid in ("clean1", "clean2", "bol_clean"):
+    for eid in ("clean1", "clean2", "bl_clean"):
         e = _counterparty(client.post("/mailbox/check", json={"id": eid}).json(), "entity")
         assert e and e["status"] == "PASS"
 
@@ -169,8 +169,8 @@ def test_vop_pass_on_clean_invoices():
     for eid in ("clean1", "clean2"):
         assert client.post("/mailbox/check", json={"id": eid}).json()["bank_vop"]["status"] == "PASS"
 
-def test_bol_has_no_vop():
-    assert client.post("/mailbox/check", json={"id": "bol_clean"}).json()["bank_vop"] is None
+def test_bl_has_no_vop():
+    assert client.post("/mailbox/check", json={"id": "bl_clean"}).json()["bank_vop"] is None
 
 def test_account_registry_stores_no_raw_ibans():
     import pathlib
@@ -229,7 +229,7 @@ def test_active_content_pdf_is_quarantined():
     assert data["verdict"] == "BLOCKED"
 
 def test_clean_pdf_attachments_pass_hygiene():
-    for eid in ("clean1", "clean2", "bol_clean"):
+    for eid in ("clean1", "clean2", "bl_clean"):
         data = client.post("/mailbox/check", json={"id": eid}).json()
         assert data["hygiene"]["status"] == "CLEAN"
 

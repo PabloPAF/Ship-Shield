@@ -1,14 +1,14 @@
 """
-ShipShield FastAPI web app — BOL Authenticity Scanner + Accounts Payable mailbox.
+ShipShield FastAPI web app — B/L Authenticity Scanner + Accounts Payable mailbox.
 
-  /          BOL scanner: upload a Bill of Lading image, extract logistics
+  /          B/L scanner: upload a Bill of Lading image, extract logistics
              identifiers via LLaMA-4 Scout (Groq), run physical telemetry validation.
   /mailbox   Outlook-style AP inbox of shipping-invoice emails. The "Cross-check
              facts" button runs the same engines (email_ingestor + telemetry_validator).
 
 Run:
-    uvicorn bol_scanner_app:app --reload --port 8502
-    # BOL scanner:  http://localhost:8502/
+    uvicorn bl_scanner_app:app --reload --port 8502
+    # B/L scanner:  http://localhost:8502/
     # AP mailbox:   http://localhost:8502/mailbox
 """
 
@@ -39,7 +39,7 @@ import audit_log
 
 # ── Constants ──────────────────────────────────────────────────────────────
 
-TEMPLATE = Path(__file__).parent / "templates" / "bol_index.html"
+TEMPLATE = Path(__file__).parent / "templates" / "bl_index.html"
 MAILBOX_TEMPLATE = Path(__file__).parent / "templates" / "mailbox.html"
 INBOX_DIR = Path(__file__).parent / "mailbox_inbox"
 LOGO_DIR = Path(__file__).parent / "logo"
@@ -47,18 +47,18 @@ SECRETS_PATH = Path(__file__).parent / ".streamlit" / "secrets.toml"
 
 SUPPORTED_MIME = {"image/jpeg", "image/jpg", "image/png", "image/webp", "image/tiff"}
 
-BOL_EXTRACTION_PROMPT = """You are a maritime document expert. Extract all logistics identifiers from this Bill of Lading image.
+BL_EXTRACTION_PROMPT = """You are a maritime document expert. Extract all logistics identifiers from this Bill of Lading image.
 
 Return ONLY a valid JSON object with these exact fields (use null for any field not found):
 {
-  "bol_number": "string — Bill of Lading number / reference",
+  "bl_number": "string — Bill of Lading number / reference",
   "vessel_name": "string — name of the carrying vessel",
   "mmsi": "string — 9-digit MMSI if printed on document, otherwise null",
   "imo": "string — IMO number (7 digits, may be labelled 'IMO No.'), otherwise null",
   "voyage_number": "string — voyage number or reference",
   "port_of_loading": "string — full port name where cargo was loaded",
   "port_of_discharge": "string — full port name where cargo is to be discharged",
-  "bol_date": "string — date in YYYY-MM-DD format",
+  "bl_date": "string — date in YYYY-MM-DD format",
   "cargo_description": "string — description of goods / commodity",
   "cargo_quantity_mt": "number — cargo weight in metric tonnes, or null",
   "shipper": "string — name of the shipper / exporter",
@@ -109,7 +109,7 @@ def _map_cargo_type(description: str) -> str:
     return description
 
 
-def _extract_bol(image_bytes: bytes, api_key: str) -> dict:
+def _extract_bl(image_bytes: bytes, api_key: str) -> dict:
     processed = _preprocess(image_bytes)
     b64 = base64.standard_b64encode(processed).decode()
     client = Groq(api_key=api_key)
@@ -118,7 +118,7 @@ def _extract_bol(image_bytes: bytes, api_key: str) -> dict:
         messages=[{
             "role": "user",
             "content": [
-                {"type": "text", "text": BOL_EXTRACTION_PROMPT},
+                {"type": "text", "text": BL_EXTRACTION_PROMPT},
                 {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}},
             ],
         }],
@@ -131,7 +131,7 @@ def _extract_bol(image_bytes: bytes, api_key: str) -> dict:
 
 # ── App ────────────────────────────────────────────────────────────────────
 
-app = FastAPI(title="ShipShield — BOL Scanner & AP Mailbox")
+app = FastAPI(title="ShipShield — B/L Scanner & AP Mailbox")
 
 # Serve the Ship-Shield logo assets (used by the mailbox button + panel header).
 app.mount("/logo", StaticFiles(directory=LOGO_DIR), name="logo")
@@ -158,7 +158,7 @@ async def health():
 
 
 @app.post("/scan")
-async def scan_bol(file: UploadFile = File(...)):
+async def scan_bl(file: UploadFile = File(...)):
     content_type = (file.content_type or "").lower().split(";")[0].strip()
     if content_type not in SUPPORTED_MIME:
         raise HTTPException(
@@ -172,24 +172,24 @@ async def scan_bol(file: UploadFile = File(...)):
 
     image_bytes = await file.read()
 
-    # Step 1 — extract BOL fields
+    # Step 1 — extract B/L fields
     try:
-        bol = _extract_bol(image_bytes, groq_key)
+        bl = _extract_bl(image_bytes, groq_key)
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Extraction failed: {e}")
 
     # Step 2 — telemetry validation
     mt_key = _read_secret("MARINETRAFFIC_API_KEY")
     ais_key = _read_secret("AISSTREAM_API_KEY")
-    cargo_raw = bol.get("cargo_description") or ""
+    cargo_raw = bl.get("cargo_description") or ""
     payload = {
-        "mmsi": bol.get("mmsi") or "",
-        "imo": bol.get("imo") or "",
-        "discharge_port": bol.get("port_of_discharge") or "",
-        "invoice_date": bol.get("bol_date") or "",
+        "mmsi": bl.get("mmsi") or "",
+        "imo": bl.get("imo") or "",
+        "discharge_port": bl.get("port_of_discharge") or "",
+        "invoice_date": bl.get("bl_date") or "",
         "cargo_type": _map_cargo_type(cargo_raw),
-        "voyage_id": bol.get("voyage_number") or "",
-        "cargo_quantity_mt": bol.get("cargo_quantity_mt"),
+        "voyage_id": bl.get("voyage_number") or "",
+        "cargo_quantity_mt": bl.get("cargo_quantity_mt"),
     }
 
     telemetry = telemetry_context_validation(
@@ -199,7 +199,7 @@ async def scan_bol(file: UploadFile = File(...)):
     )
 
     return JSONResponse({
-        "bol": bol,
+        "bl": bl,
         "telemetry": telemetry,
         "mode": "live" if mt_key else "mock",
     })

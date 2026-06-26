@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BOL Authenticity Scanner — ShipShield</title>
+  <title>B/L Authenticity Scanner — ShipShield</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -230,7 +230,7 @@
       margin-bottom: 16px;
     }
 
-    /* BOL fields table */
+    /* B/L fields table */
     .field-row {
       display: flex;
       justify-content: space-between;
@@ -306,7 +306,7 @@
 
 <header>
   <div class="logo">Ship<span>Shield</span></div>
-  <div class="badge">BOL Scanner</div>
+  <div class="badge">B/L Scanner</div>
   <a href="/mailbox" style="margin-left:auto;color:inherit;text-decoration:none;opacity:.85;font-size:14px;">📧 AP Mailbox →</a>
 </header>
 
@@ -328,7 +328,7 @@
 
   <!-- Preview strip -->
   <div id="preview-strip">
-    <img id="preview-img" src="" alt="BOL preview" />
+    <img id="preview-img" src="" alt="B/L preview" />
     <div class="file-meta">
       <div class="file-name" id="file-name">—</div>
       <div class="file-size" id="file-size">—</div>
@@ -471,7 +471,7 @@
   // ── Render results ──────────────────────────────────────────────────────
 
   function renderResults(data) {
-    const { bol, telemetry, mode } = data;
+    const { bl, telemetry, mode } = data;
     const verdict = telemetry.verdict;
 
     const icons = { CLEAR: '✅', REVIEW: '⚠️', BLOCKED: '🚨' };
@@ -500,8 +500,8 @@
 
       <div class="results-grid">
         <div class="card">
-          <div class="card-title">Extracted BOL Fields</div>
-          ${bolFields(bol)}
+          <div class="card-title">Extracted B/L Fields</div>
+          ${blFields(bl)}
         </div>
         <div class="card">
           <div class="card-title">Validation Checks</div>
@@ -519,15 +519,15 @@
     results.classList.add('visible');
   }
 
-  const BOL_FIELD_LABELS = {
-    bol_number:         'BOL No.',
+  const BL_FIELD_LABELS = {
+    bl_number:         'B/L No.',
     vessel_name:        'Vessel',
     mmsi:               'MMSI',
     imo:                'IMO',
     voyage_number:      'Voyage No.',
     port_of_loading:    'Port of Loading',
     port_of_discharge:  'Port of Discharge',
-    bol_date:           'BOL Date',
+    bl_date:           'B/L Date',
     cargo_description:  'Cargo',
     cargo_quantity_mt:  'Quantity (MT)',
     shipper:            'Shipper',
@@ -535,9 +535,9 @@
     notify_party:       'Notify Party',
   };
 
-  function bolFields(bol) {
-    return Object.entries(BOL_FIELD_LABELS).map(([key, label]) => {
-      const val = bol[key];
+  function blFields(bl) {
+    return Object.entries(BL_FIELD_LABELS).map(([key, label]) => {
+      const val = bl[key];
       const display = (val !== null && val !== undefined && val !== '')
         ? escHtml(String(val))
         : '<span class="missing">not found</span>';

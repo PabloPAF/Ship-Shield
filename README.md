@@ -36,9 +36,9 @@ After extraction, the invoice's logistics claims are verified against AIS vessel
 
 ## Features
 
-- **BOL scanner web app** — standalone FastAPI app: drag-drop a Bill of Lading image, get an instant authenticity verdict
+- **B/L scanner web app** — standalone FastAPI app: drag-drop a Bill of Lading image, get an instant authenticity verdict
 - **5-tab Streamlit dashboard** — extraction, chatbot, fraud detection, telemetry validation, email ingestion
-- **LLaMA-4 Scout extraction** — vision-capable LLM via Groq API; multilingual (8+ languages); BOL-specific prompt extracts vessel, ports, cargo, tonnage
+- **LLaMA-4 Scout extraction** — vision-capable LLM via Groq API; multilingual (8+ languages); B/L-specific prompt extracts vessel, ports, cargo, tonnage
 - **Isolation Forest anomaly detection** — unsupervised ML on invoice amount patterns
 - **Skuld Cases A–D** — four maritime fraud patterns from P&I Club case files
 - **VEC email detection** — `.eml` upload, IMAP live-mailbox fetch, or demo scenario — header forensics and attachment extraction
@@ -57,7 +57,7 @@ After extraction, the invoice's logistics claims are verified against AIS vessel
 | Layer | Technology |
 |---|---|
 | Streamlit dashboard | Streamlit |
-| BOL scanner web app | FastAPI + Uvicorn + vanilla HTML/CSS/JS |
+| B/L scanner web app | FastAPI + Uvicorn + vanilla HTML/CSS/JS |
 | LLM extraction | LLaMA-4 Scout via Groq API |
 | Anomaly detection | Isolation Forest (scikit-learn) |
 | Data validation | Pydantic v2 |
@@ -163,15 +163,15 @@ Both live modes fall back silently to the local registry on network or API error
 
 ---
 
-### 4. BOL Scanner Web App
+### 4. B/L Scanner Web App
 
 A focused, standalone web interface for scanning a single Bill of Lading image — no login, no setup beyond running the server.
 
 ```
-Upload BOL image (JPEG / PNG / WebP)
+Upload B/L image (JPEG / PNG / WebP)
         ↓
 LLaMA-4 Scout extracts: vessel name, MMSI, IMO, voyage number,
-  port of loading, port of discharge, BOL date,
+  port of loading, port of discharge, B/L date,
   cargo description, tonnage, shipper, consignee
         ↓
 Cargo description → type mapping
@@ -185,9 +185,9 @@ Verdict rendered in browser:
   🚨 BLOCKED   — fraud indicator detected + field breakdown
 ```
 
-**Run the BOL scanner:**
+**Run the B/L scanner:**
 ```bash
-uvicorn bol_scanner_app:app --reload --port 8502
+uvicorn bl_scanner_app:app --reload --port 8502
 # open http://localhost:8502
 ```
 
@@ -211,10 +211,10 @@ Combined verdict rendered in a side panel:
 ```
 
 A HIGH email-header flag escalates the verdict to BLOCKED. The button calls the **same
-engines** used by the BOL scanner and the Streamlit dashboard — no logic is duplicated.
+engines** used by the B/L scanner and the Streamlit dashboard — no logic is duplicated.
 
 ```bash
-uvicorn bol_scanner_app:app --reload --port 8502
+uvicorn bl_scanner_app:app --reload --port 8502
 # open http://localhost:8502/mailbox
 ```
 
@@ -256,9 +256,9 @@ The Telemetry Validation tab has 10 built-in scenarios. Key examples:
 ```
 ShipShield/
 ├── enhanced_ui.py          # 6-tab Streamlit dashboard
-├── bol_scanner_app.py      # FastAPI app — BOL scanner + Accounts Payable mailbox (all layers)
+├── bl_scanner_app.py      # FastAPI app — B/L scanner + Accounts Payable mailbox (all layers)
 ├── templates/
-│   ├── bol_index.html      # BOL scanner frontend — single-file, no build step
+│   ├── bl_index.html      # B/L scanner frontend — single-file, no build step
 │   └── mailbox.html        # Outlook-style AP mailbox (HTML-escaped renderer)
 ├── mailbox_inbox/          # Demo .eml inbox + inbox.json manifest (14 scenarios)
 ├── telemetry_validator.py  # Layer 2 — physical telemetry (AIS port call / cargo / DWT / dates)
@@ -371,10 +371,10 @@ review-grade signals fire, otherwise **CLEAR**.
    streamlit run enhanced_ui.py
    ```
 
-   **BOL scanner + Accounts Payable mailbox** (FastAPI):
+   **B/L scanner + Accounts Payable mailbox** (FastAPI):
    ```bash
-   uvicorn bol_scanner_app:app --reload --port 8502
-   # BOL scanner:  http://localhost:8502/
+   uvicorn bl_scanner_app:app --reload --port 8502
+   # B/L scanner:  http://localhost:8502/
    # AP mailbox:   http://localhost:8502/mailbox
    ```
 
@@ -426,7 +426,7 @@ In addition to telemetry validation, Tab 3 applies document-level rules:
 - [x] Skuld Case D — late agency invoice submission
 - [x] VEC email header analysis (reply-to mismatch, impersonation, urgency keywords)
 - [x] Three-way verdict: CLEAR / REVIEW / BLOCKED
-- [x] BOL scanner web app — FastAPI + drag-drop frontend, LLaMA BOL extraction, cargo type mapping
+- [x] B/L scanner web app — FastAPI + drag-drop frontend, LLaMA B/L extraction, cargo type mapping
 - [x] AISStream real-time WebSocket integration — live vessel position check with listen window
 - [x] IMAP mailbox integration — fetch unread invoice emails directly from Gmail, Outlook, Yahoo, or any IMAP provider
 - [ ] Auto-extract MMSI, voyage ID, and port from invoice image via LLaMA (Streamlit tab auto-fill)

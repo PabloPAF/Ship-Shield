@@ -112,7 +112,7 @@
   <div class="topbar">
     <span class="waffle">▦</span><span class="appname">Outlook</span>
     <div class="search">🔍&nbsp; Search</div>
-    <div class="right"><a href="/">🚢 BOL Scanner</a><span>⚙</span><div class="avatar">AP</div></div>
+    <div class="right"><a href="/">🚢 B/L Scanner</a><span>⚙</span><div class="avatar">AP</div></div>
   </div>
   <div class="app">
     <div class="nav">
@@ -167,7 +167,7 @@ function renderList(){
     c.appendChild(d);
   });
 }
-function docHTML(e){ return e.doc_type==="bol" ? bolHTML(e.invoice) : invoiceHTML(e.invoice); }
+function docHTML(e){ return e.doc_type==="bl" ? blHTML(e.invoice) : invoiceHTML(e.invoice); }
 function invoiceHTML(inv){
   const rows=inv.items.map(it=>`<tr><td>${esc(it[0])}</td><td style="text-align:right">${esc(it[1])}</td></tr>`).join("");
   return `<div class="attach"><div class="ahead"><div class="aico">PDF</div>
@@ -181,7 +181,7 @@ function invoiceHTML(inv){
     <code>Vessel: ${esc(inv.vessel)} · Port of discharge: ${esc(inv.port)}</code><br>
     <code>Beneficiary IBAN: ${esc(inv.iban)}</code></div></div></div>`;
 }
-function bolHTML(b){
+function blHTML(b){
   return `<div class="attach"><div class="ahead"><div class="aico" style="background:#2a6f8e">PDF</div>
     <div><div class="aname">${b.number}.pdf</div><div class="asize">Bill of Lading · 1 page</div></div></div>
     <div class="inv"><div class="ititle" style="color:#2a6f8e">BILL OF LADING</div>
