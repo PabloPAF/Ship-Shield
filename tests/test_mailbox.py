@@ -37,6 +37,10 @@ EXPECTED_VERDICT = {
     "vessel_risk": "REVIEW", # clean telemetry, but vessel has PSC detentions (Layer 2 enrichment)
     "entity_fail": "BLOCKED",# clean telemetry, but vendor is dissolved / VAT invalid (Layer 4)
     "amount_outlier": "REVIEW", # clean, but amount is a per-vendor statistical outlier
+    "bl_tanker_grain": "BLOCKED", # B/L — tanker invoiced for grain (Case B)
+    "bl_dwt": "BLOCKED",          # B/L — 60,000 MT > 45,000 DWT (Case C)
+    "bl_postdate": "BLOCKED",     # B/L — dated 14 days off dock date (Case A)
+    "bl_sanctioned": "BLOCKED",   # B/L — sanctioned vessel/carrier (Layer 4)
 }
 
 # The single telemetry check expected to FAIL for each fraud scenario.
@@ -48,6 +52,9 @@ EXPECTED_FAIL_FIELD = {
     "postdate": "invoice_date",
     "vec": "iban",
     "bl_forged": "discharge_port",
+    "bl_tanker_grain": "cargo_type",
+    "bl_dwt": "cargo_quantity_mt",
+    "bl_postdate": "invoice_date",
 }
 
 
@@ -67,8 +74,9 @@ def test_inbox_manifest_has_all_emails():
     r = client.get("/mailbox/emails")
     assert r.status_code == 200
     emails = r.json()
-    assert len(emails) == 15
+    assert len(emails) == 19
     assert {e["id"] for e in emails} == set(EXPECTED_VERDICT)
+    assert sum(1 for e in emails if e["doc_type"] == "bl") == 6   # six B/L scenarios
     for e in emails:
         assert e["invoice"]["number"]
         assert e["payload"]["mmsi"]

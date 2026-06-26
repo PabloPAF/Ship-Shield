@@ -266,7 +266,7 @@ ShipShield/
 ├── templates/
 │   ├── bl_index.html      # B/L scanner frontend — single-file, no build step
 │   └── mailbox.html        # Outlook-style AP mailbox (HTML-escaped renderer)
-├── mailbox_inbox/          # Demo .eml inbox + inbox.json manifest (15 scenarios)
+├── mailbox_inbox/          # Demo .eml inbox + inbox.json manifest (19 scenarios, 6 B/L)
 ├── telemetry_validator.py  # Layer 2 — physical telemetry (AIS port call / cargo / DWT / dates)
 ├── email_ingestor.py       # Layer 1 — VEC email header analysis + attachment extraction
 ├── email_forensics.py      # Layer 1 — look-alike domain, homoglyph & zero-width detection
