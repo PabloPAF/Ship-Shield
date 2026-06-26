@@ -26,8 +26,13 @@ REG_PATH = Path(__file__).parent / "company_registry.json"
 _DEAD_STATUSES = {"dissolved", "insolvent", "liquidation", "struck off", "struck-off", "inactive"}
 
 
+from email_forensics import _levenshtein  # reuse existing edit-distance lever
+
+
 def _norm(s: str) -> str:
-    return re.sub(r"\s+", " ", (s or "")).strip().lower()
+    # lower-case, drop punctuation (so 'Atlantic Shipping B.V.' == 'atlantic shipping bv')
+    s = re.sub(r"[^a-z0-9 ]", "", (s or "").lower())
+    return re.sub(r"\s+", " ", s).strip()
 
 
 def _load() -> dict:
@@ -54,6 +59,19 @@ def verify_entity(vendor: str, invoice_date: str = "", vies_api_key: str | None 
     source = "vies_api" if vies_api_key else "mock_registry"
 
     if rec is None:
+        # Not an exact match. Is it a near-match of a known entity? That is itself a
+        # red flag (impersonation/typosquat) — surface it for review, never auto-pass.
+        key = _norm(vendor)
+        near = next((k for k in reg
+                     if not k.startswith("_") and 0 < _levenshtein(key, k) <= 2), None)
+        if near:
+            return {
+                "status": "WARN", "field": "entity",
+                "detail": (f"Counterparty '{vendor}' is a near-match of registered entity "
+                           f"'{reg[near].get('vat_id','')}' / '{near}' but not an exact match — "
+                           f"possible impersonation. Verify before paying."),
+                "source": source,
+            }
         return {
             "status": "WARN",
             "field": "entity",
