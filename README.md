@@ -177,13 +177,19 @@ LLaMA-4 Scout extracts: vessel name, MMSI, IMO, voyage number,
 Cargo description → type mapping
   e.g. "bulk wheat" → grain  |  "crude petroleum" → crude_oil
         ↓
-telemetry_context_validation() — same engine as the Streamlit app
+Full layer stack — same engines as the mailbox:
+  Layer 0 document hygiene · Layer 2 telemetry + vessel risk (Equasis/PSC)
+  · Layer 4 sanctions + entity/VAT  (Layer 3 bank checks N/A — a B/L carries no IBAN)
         ↓
-Verdict rendered in browser:
+Unified verdict rendered in browser:
   ✅ CLEAR     — physical event confirmed
-  ⚠️ REVIEW    — API unavailable or vessel not identified
-  🚨 BLOCKED   — fraud indicator detected + field breakdown
+  ⚠️ REVIEW    — API unavailable, vessel not identified, or PSC/risk flag
+  🚨 BLOCKED   — fraud/sanctions/forgery indicator + per-layer breakdown
 ```
+
+Extraction requires a `GROQ_API_KEY` (the LLaMA‑4 vision model); without it `/scan`
+returns a clear 503. The validation layers themselves run offline against the mock
+data, exactly like the mailbox.
 
 **Run the B/L scanner:**
 ```bash

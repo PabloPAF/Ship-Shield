@@ -472,13 +472,21 @@
 
   function renderResults(data) {
     const { bl, telemetry, mode } = data;
-    const verdict = telemetry.verdict;
+    const verdict = data.verdict || telemetry.verdict;
 
     const icons = { CLEAR: '✅', REVIEW: '⚠️', BLOCKED: '🚨' };
     const labels = { CLEAR: 'CLEAR — Document verified', REVIEW: 'NEEDS REVIEW', BLOCKED: 'BLOCKED — Fraud indicators detected' };
 
     const scoreColor = verdict === 'CLEAR' ? 'var(--clear)' : verdict === 'REVIEW' ? 'var(--review)' : 'var(--blocked)';
-    const score = (telemetry.risk_score * 100).toFixed(0);
+    const score = ((data.risk_score != null ? data.risk_score : telemetry.risk_score) * 100).toFixed(0);
+
+    // Merge every layer into one check list: Layer 0 (hygiene), Layer 2 (telemetry),
+    // Layer 2+ (vessel risk) and Layer 4 (counterparty: sanctions + entity).
+    const allChecks = [];
+    if (data.hygiene) allChecks.push({ status: data.hygiene.status, field: 'document_hygiene (Layer 0)', detail: data.hygiene.detail });
+    (telemetry.checks || []).forEach(c => allChecks.push(c));
+    if (data.vessel_risk) allChecks.push({ status: data.vessel_risk.status, field: 'vessel_risk (Equasis/PSC)', detail: data.vessel_risk.detail });
+    (data.counterparty || []).forEach(c => allChecks.push({ status: c.status, field: c.field + ' (Layer 4)', detail: c.detail }));
 
     let html = `
       <div class="verdict-banner ${verdict}">
@@ -504,8 +512,8 @@
           ${blFields(bl)}
         </div>
         <div class="card">
-          <div class="card-title">Validation Checks</div>
-          ${checkItems(telemetry.checks)}
+          <div class="card-title">Validation Checks (Layers 0 · 2 · 4)</div>
+          ${checkItems(allChecks)}
         </div>
       </div>
 

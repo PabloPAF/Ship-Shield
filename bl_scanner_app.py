@@ -198,9 +198,67 @@ async def scan_bl(file: UploadFile = File(...)):
         aisstream_api_key=ais_key,
     )
 
+    # Step 3 — run the same enrichment layers as the mailbox. A B/L carries no
+    # IBAN, so the bank layers (3) are not applicable here.
+    vendor = bl.get("shipper") or bl.get("carrier") or ""
+    hygiene = scan_attachments([{
+        "filename": file.filename or "upload", "content_type": content_type, "bytes": image_bytes,
+    }])
+    vessel_risk = assess_vessel(
+        imo=payload["imo"], mmsi=payload["mmsi"],
+        vessel_name=telemetry.get("vessel_name", "") or bl.get("vessel_name", "") or "",
+        equasis_api_key=_read_secret("EQUASIS_API_KEY"),
+    )
+    counterparty = [screen_counterparty(
+        vendor=vendor, carrier=telemetry.get("carrier", "") or "",
+        vessel_name=telemetry.get("vessel_name", "") or bl.get("vessel_name", "") or "",
+        imo=payload["imo"], mmsi=payload["mmsi"], iban_country="",
+        sanctions_api_key=_read_secret("SANCTIONS_API_KEY"),
+    )]
+    entity = verify_entity(vendor, invoice_date=payload["invoice_date"],
+                           vies_api_key=_read_secret("VIES_API_KEY"))
+    if entity:
+        counterparty.append(entity)
+
+    # Unified verdict across Layers 0, 2, 2+ and 4 (B/L has no Layer 3).
+    verdict = telemetry.get("verdict", "REVIEW")
+    risk = float(telemetry.get("risk_score", 0.0))
+    if hygiene and hygiene["status"] == "FAIL":
+        verdict = "BLOCKED"; risk = max(risk, 0.90)
+    elif hygiene and hygiene["status"] == "WARN" and verdict == "CLEAR":
+        verdict = "REVIEW"; risk = max(risk, 0.3)
+    for c in counterparty:
+        if c["status"] == "FAIL":
+            verdict = "BLOCKED"; risk = max(risk, float(c.get("risk", 1.0)))
+        elif c["status"] == "WARN" and verdict == "CLEAR":
+            verdict = "REVIEW"; risk = max(risk, 0.3)
+    if vessel_risk and vessel_risk["status"] == "WARN" and verdict == "CLEAR":
+        verdict = "REVIEW"; risk = max(risk, 0.3)
+
+    failed = [c["field"] for c in telemetry.get("checks", []) if c["status"] == "FAIL"]
+    failed += [c["field"] for c in counterparty if c["status"] == "FAIL"]
+    if hygiene and hygiene["status"] == "FAIL":
+        failed.append("document_hygiene")
+    audit_entry = audit_log.append({
+        "source_doc": "bl_upload", "verdict": verdict, "risk_score": round(risk, 2),
+        "layers": {
+            "hygiene": hygiene["status"] if hygiene else None,
+            "telemetry": telemetry.get("verdict"),
+            "vessel_risk": vessel_risk["status"] if vessel_risk else None,
+            "counterparty": [{"field": c["field"], "status": c["status"]} for c in counterparty],
+        },
+        "failed_indicators": failed,
+    })
+
     return JSONResponse({
         "bl": bl,
+        "verdict": verdict,
+        "risk_score": round(risk, 2),
         "telemetry": telemetry,
+        "hygiene": hygiene,
+        "vessel_risk": vessel_risk,
+        "counterparty": counterparty,
+        "audit": {"entry_hash": audit_entry["entry_hash"], "ts": audit_entry["ts"]},
         "mode": "live" if mt_key else "mock",
     })
 
