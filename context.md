@@ -68,7 +68,7 @@ Two entry points share the same validation core:
 [Tab 1 — Invoice Extraction]
   - Preprocess image (contrast, resize)
   - LLaMA-4 Scout via Groq API (vision extraction)
-  - Isolation Forest anomaly detection
+  - z-score outlier anomaly detection
   - Pydantic validation (InvoiceData, LineItem)
          ↓
 [Extracted JSON payload]
@@ -79,21 +79,21 @@ Two entry points share the same validation core:
   → shared validation core (see below)
 ```
 
-### Entry Point B — BOL Scanner web app (`bol_scanner_app.py`)
+### Entry Point B — B/L Scanner web app (`bl_scanner_app.py`)
 ```
 [User uploads Bill of Lading image]
          ↓
 [POST /scan — FastAPI endpoint]
   - Preprocess image (contrast, resize)
-  - LLaMA-4 Scout BOL extraction prompt
-    → bol_number, vessel_name, mmsi, imo, voyage_number,
-      port_of_loading, port_of_discharge, bol_date,
+  - LLaMA-4 Scout B/L extraction prompt
+    → bl_number, vessel_name, mmsi, imo, voyage_number,
+      port_of_loading, port_of_discharge, bl_date,
       cargo_description, cargo_quantity_mt, shipper, consignee
   - Cargo keyword → type mapping (grain/coal/crude_oil/lng/ore…)
          ↓
 [Shared validation core — telemetry_context_validation()]
   - Port check: MarineTraffic /portcalls → AISStream WebSocket → mock registry
-  - Case A: bol_date vs dock_date (±2 days)
+  - Case A: bl_date vs dock_date (±2 days)
   - Case B: vessel_type vs cargo_type incompatibility
   - Case B: voyage_id duplicate detection
   - Case C: cargo_quantity_mt vs deadweight_tonnes
@@ -107,7 +107,7 @@ Two entry points share the same validation core:
          ↓
 [GET / — rendered in browser]
   - Verdict banner (colour-coded) + risk %
-  - Extracted BOL fields table
+  - Extracted B/L fields table
   - Per-check breakdown
 ```
 
@@ -119,7 +119,7 @@ Two entry points share the same validation core:
 |---|---|
 | Base invoice parser | SmartInvoiceAI (open source, extended) |
 | LLM extraction | LLaMA-4 Scout via Groq API |
-| Anomaly detection | Isolation Forest (scikit-learn) |
+| Anomaly detection | z-score outlier (scikit-learn) |
 | Data models | Pydantic v2 (`InvoiceData`, `LineItem`) |
 | Email parsing | Python `email` stdlib (RFC 2822 / MIME) |
 | IMAP mailbox | Python `imaplib` stdlib — SSL, unread fetch, mark-read |
@@ -128,8 +128,8 @@ Two entry points share the same validation core:
 | AIS data (mock) | `maritime_registry.json` — 3 vessels keyed by MMSI |
 | AIS data (real-time) | AISStream WebSocket — `wss://stream.aisstream.io/v0/stream` (free) |
 | AIS data (historical) | MarineTraffic REST API — `GET /portcalls/{api_key}` |
-| Streamlit dashboard | `enhanced_ui.py` — 5-tab app (invoice, chatbot, fraud, telemetry, email) |
-| BOL scanner web app | FastAPI + vanilla HTML/CSS/JS — `bol_scanner_app.py` + `templates/bol_index.html` |
+| Streamlit dashboard | `enhanced_ui.py` — 6-tab app (invoice, chatbot, fraud, telemetry, email) |
+| B/L scanner web app | FastAPI + vanilla HTML/CSS/JS — `bl_scanner_app.py` + `templates/bl_index.html` |
 | Web framework | FastAPI + Uvicorn |
 | File upload | `python-multipart` |
 | Configuration | `.streamlit/secrets.toml` (Groq key, MarineTraffic key) |
@@ -219,7 +219,7 @@ Each entry also carries `invoiced_voyages` (list) for Case B duplicate detection
 ---
 
 ### `enhanced_ui.py`
-Five-tab Streamlit dashboard.
+Six-tab Streamlit dashboard.
 
 | Tab | Purpose |
 |---|---|
@@ -244,29 +244,29 @@ Data models and shared helpers.
 
 ---
 
-### `bol_scanner_app.py` + `templates/bol_index.html`
+### `bl_scanner_app.py` + `templates/bl_index.html`
 Standalone FastAPI web app for scanning a Bill of Lading image for authenticity. Runs independently of the Streamlit app — no shared session state.
 
 Routes:
-- `GET /` — serves `bol_index.html`
+- `GET /` — serves `bl_index.html`
 - `GET /health` — returns Groq/MarineTraffic/AISStream key status and AIS mode (`marinetraffic` | `aisstream` | `mock`)
-- `POST /scan` — accepts JPEG/PNG upload, returns `{ bol, telemetry, mode }` JSON
+- `POST /scan` — accepts JPEG/PNG upload, returns `{ bl, telemetry, mode }` JSON
 
-Backend (`bol_scanner_app.py`):
-- `_extract_bol(image_bytes, api_key)` — BOL-specific LLaMA-4 Scout prompt; extracts bol_number, vessel_name, mmsi, imo, voyage_number, port_of_loading, port_of_discharge, bol_date, cargo_description, cargo_quantity_mt, shipper, consignee, notify_party
+Backend (`bl_scanner_app.py`):
+- `_extract_bl(image_bytes, api_key)` — B/L-specific LLaMA-4 Scout prompt; extracts bl_number, vessel_name, mmsi, imo, voyage_number, port_of_loading, port_of_discharge, bl_date, cargo_description, cargo_quantity_mt, shipper, consignee, notify_party
 - `_map_cargo_type(description)` — keyword mapping from free-text cargo to telemetry validator taxonomy (grain, coal, crude_oil, lng, ore, cement, fertiliser…)
 - `_read_secret(key)` — reads from `os.environ` then `.streamlit/secrets.toml` (compatible with existing key setup)
 
-Frontend (`templates/bol_index.html`):
+Frontend (`templates/bl_index.html`):
 - Single-file, zero build step, no external dependencies
 - Drag-and-drop upload zone with image preview
 - Three-step progress indicator (extracting → validating → complete)
 - Verdict banner: colour-coded CLEAR / REVIEW / BLOCKED + risk %
-- Two-column result: extracted BOL fields table + per-check breakdown
+- Two-column result: extracted B/L fields table + per-check breakdown
 
 Run:
 ```bash
-uvicorn bol_scanner_app:app --reload --port 8502
+uvicorn bl_scanner_app:app --reload --port 8502
 ```
 
 ---
@@ -320,7 +320,7 @@ result = telemetry_context_validation(
 # result["verdict"] → "CLEAR" | "REVIEW" | "BLOCKED"
 ```
 
-API key resolution order (both Streamlit app and BOL scanner):
+API key resolution order (both Streamlit app and B/L scanner):
 `st.secrets / os.environ ["MARINETRAFFIC_API_KEY"]` → `["AISSTREAM_API_KEY"]` → mock mode.
 
 ---
@@ -373,9 +373,9 @@ API key resolution order (both Streamlit app and BOL scanner):
 | `email_ingestor.py` — VEC header detection, attachment extraction, IMAP fetch, demo factory | Done |
 | AISStream WebSocket integration — real-time vessel position, `ais_window_seconds` slider | Done |
 | IMAP mailbox integration — Gmail/Outlook/Yahoo presets, app-password auth, mark-read | Done |
-| `enhanced_ui.py` — 5-tab dashboard, 10 telemetry demos, email tab with 3 input modes | Done |
-| `bol_scanner_app.py` — FastAPI BOL scanner, LLaMA extraction, cargo mapping | Done |
-| `templates/bol_index.html` — dark-theme drag-drop web UI, live results | Done |
+| `enhanced_ui.py` — 6-tab dashboard, 10 telemetry demos, email tab with 3 input modes | Done |
+| `bl_scanner_app.py` — FastAPI B/L scanner, LLaMA extraction, cargo mapping | Done |
+| `templates/bl_index.html` — dark-theme drag-drop web UI, live results | Done |
 | All modules — syntax valid, cross-module integration tests passing | Done |
 
 ---
@@ -390,3 +390,48 @@ API key resolution order (both Streamlit app and BOL scanner):
 - Lloyd's List Intelligence (March 2024)
 - IBM "Cyber Security and Fraud in Maritime Logistics" (2023)
 - [MarineTraffic API](https://www.marinetraffic.com/en/ais-api-services)
+
+---
+
+## 12. 2026 update — layered validation engine + Accounts Payable mailbox
+
+The project now runs a multi-layer cross-check, exposed through `bl_scanner_app.py`
+(FastAPI) on two surfaces:
+
+- **`/` — B/L upload scanner**: LLaMA-4 extraction (requires `GROQ_API_KEY`) → full layer stack.
+- **`/mailbox` — Accounts Payable inbox**: Outlook-style demo (`mailbox_inbox/*.eml` + `inbox.json`); `POST /mailbox/check` runs the layers; `GET /mailbox/audit` exposes the audit log.
+
+**Validation layers**
+
+| Layer | Purpose | Module(s) |
+|---|---|---|
+| 0 — Document hygiene | Active/hidden content in attachments (PDF JS / OpenAction / Launch / EmbeddedFile; Office macros) | `document_hygiene.py` |
+| 1 — Email / VEC | Reply-to mismatch, free provider, urgency; **look-alike domain, homoglyph, zero-width** | `email_ingestor.py`, `email_forensics.py` |
+| 2 — Physical telemetry | AIS port call / Cases A–D, plus **vessel risk** (flag, class, PSC detentions) | `telemetry_validator.py`, `vessel_risk.py` |
+| 3 — Bank account | Hashed IBAN ledger + **change-detection**, and **Verification of Payee** | `vendor_ledger.py`, `bank_enrich.py` |
+| 4 — Counterparty | **Sanctions / dark-fleet** screening + **VAT / commercial-register** verification | `sanctions_screen.py`, `entity_verify.py` |
+
+Each external source has a live-API hook with an offline mock fallback. The verdict is
+BLOCKED if any blocking indicator fires (graduated IOC weights — see README's
+"Indicator weights" table), REVIEW for unverifiable signals, otherwise CLEAR. Every
+check writes a **tamper-evident, hash-chained audit record** (`audit_log.py`).
+
+**Security model (the selling point)**
+- IBANs are never stored in clear text — only HMAC-SHA256 hashes with a secret pepper
+  (`vendor_ledger.json`, `account_registry.json` are safe to commit).
+- Data minimisation toward OSINT: only the identifier needed per check is sent out;
+  the IBAN and document contents never leave the system (the IBAN only goes to a
+  contracted Verification-of-Payee provider).
+- All rendered content is HTML-escaped (XSS), keys live in `.streamlit/secrets.toml`/
+  env, and the audit log is append-only.
+
+**Role of AI** — exactly one AI component decides nothing: LLaMA-4 Scout (Groq) *reads*
+invoice/B/L images into structured fields (and powers the chatbot). The amount
+anomaly check is a **z-score** outlier test (not Isolation Forest, despite earlier
+docs). All CLEAR/REVIEW/BLOCKED decisions are deterministic rules — AI structures the
+document, transparent rules judge it, which keeps verdicts explainable and auditable.
+
+**Compliance** — German-market GDPR Terms of Use & consent:
+`legal/ShipShield_Nutzungsbedingungen_DSGVO.docx` (German authoritative + English courtesy).
+
+**Terminology** — "BOL" has been corrected to "B/L" throughout the code, templates and tests.

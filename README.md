@@ -37,9 +37,9 @@ After extraction, the invoice's logistics claims are verified against AIS vessel
 ## Features
 
 - **B/L scanner web app** — standalone FastAPI app: drag-drop a Bill of Lading image, get an instant authenticity verdict
-- **5-tab Streamlit dashboard** — extraction, chatbot, fraud detection, telemetry validation, email ingestion
+- **6-tab Streamlit dashboard** — extraction, chatbot, fraud detection, telemetry validation, email ingestion
 - **LLaMA-4 Scout extraction** — vision-capable LLM via Groq API; multilingual (8+ languages); B/L-specific prompt extracts vessel, ports, cargo, tonnage
-- **Isolation Forest anomaly detection** — unsupervised ML on invoice amount patterns
+- **z-score outlier anomaly detection** — unsupervised ML on invoice amount patterns
 - **Skuld Cases A–D** — four maritime fraud patterns from P&I Club case files
 - **VEC email detection** — `.eml` upload, IMAP live-mailbox fetch, or demo scenario — header forensics and attachment extraction
 - **AISStream live telemetry** — real-time vessel position check via WebSocket (free tier); falls back to mock registry
@@ -59,7 +59,7 @@ After extraction, the invoice's logistics claims are verified against AIS vessel
 | Streamlit dashboard | Streamlit |
 | B/L scanner web app | FastAPI + Uvicorn + vanilla HTML/CSS/JS |
 | LLM extraction | LLaMA-4 Scout via Groq API |
-| Anomaly detection | Isolation Forest (scikit-learn) |
+| Anomaly detection | z-score outlier (scikit-learn) |
 | Data validation | Pydantic v2 |
 | Email parsing | Python `email` stdlib (RFC 2822 / MIME) |
 | IMAP mailbox | Python `imaplib` stdlib (SSL, unread fetch, mark-read) |
@@ -115,7 +115,7 @@ Images or PDF pages are preprocessed (contrast enhancement, resize) then sent to
 }
 ```
 
-Isolation Forest runs across the batch to score each invoice against the distribution of amounts, taxes, and subtotals.
+z-score outlier runs across the batch to score each invoice against the distribution of amounts, taxes, and subtotals.
 
 ---
 
@@ -372,7 +372,7 @@ review-grade signals fire, otherwise **CLEAR**.
 
 4. Run the apps:
 
-   **Streamlit dashboard** (full 5-tab suite):
+   **Streamlit dashboard** (full 6-tab suite):
    ```bash
    streamlit run enhanced_ui.py
    ```
