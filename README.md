@@ -19,6 +19,34 @@ ShipShield cross-references invoice and B/L data against **live AIS vessel track
 
 ![BOL-DEMO](image-3.png)
 
+## Architecture — `/mailbox/check` cross-check flow
+
+```mermaid
+flowchart TD
+  A(["POST /mailbox/check · email_id"]) --> B["Load .eml · mailbox_inbox/&lt;id&gt;.eml"]
+  B --> L0["Layer 0 — Document Hygiene · document_hygiene.scan_attachments()<br/>scan PDFs for JS / macros / VBA · CLEAN · WARN · FAIL"]
+  L0 --> L1a["Layer 1a — VEC Header Analysis · email_ingestor.ingest_eml()<br/>reply-to mismatch · free-provider sender · urgency keywords"]
+  L0 --> L1b["Layer 1b — Forensic Analysis · email_forensics.analyze()<br/>typosquat domains · homoglyphs · zero-width · HIGH · MED · LOW · CLEAN"]
+  L1a --> P["Extract Invoice Payload<br/>vendor · iban · amount · mmsi · imo · discharge_port · voyage_id · cargo_type · cargo_quantity_mt · invoice_date"]
+  L1b --> P
+  P --> L2a["Layer 2a — Telemetry Validation · telemetry_context_validation()<br/>A: date vs AIS dock · B: cargo vs vessel · C: duplicate voyage · D: weight vs DWT<br/>CLEAR · REVIEW · BLOCKED"]
+  P --> L2b["Layer 2b — Vessel Risk · vessel_risk.assess_vessel()<br/>PSC detentions · flag-of-convenience · class society"]
+  P --> L2c["Layer 2c — Amount Anomaly · amount_anomaly.assess_amount()<br/>per-vendor z-score outlier (pandas baseline)"]
+  P --> L3a["Layer 3a — Vendor Ledger · vendor_ledger.check_vendor_iban()<br/>HMAC-SHA256 hashed IBAN history · new / changed account"]
+  P --> L3b["Layer 3b — Verification of Payee · bank_enrich.enrich_bank()<br/>does the account belong to the named vendor?"]
+  P --> L4a["Layer 4a — Sanctions Screen · sanctions_screen.screen_counterparty()<br/>vendor · vessel · IMO/MMSI · IBAN jurisdiction · PASS · WARN · FAIL"]
+  P --> L4b["Layer 4b — Entity Verify · entity_verify.verify_entity()<br/>VAT validation · commercial register · status · name-match"]
+  L2a --> C{"Combine Verdicts<br/>HIGH email OR any FAIL → BLOCKED<br/>WARN / REVIEW → REVIEW · all PASS → CLEAR"}
+  L2b --> C
+  L2c --> C
+  L3a --> C
+  L3b --> C
+  L4a --> C
+  L4b --> C
+  C --> AU["audit_log.append()<br/>hash-chained JSONL tamper-evident log"]
+  C --> R["JSON Response to UI<br/>all layer results + risk scores + audit hash"]
+```
+
 ## How to Use
 
 ### 1. Clone the repo
