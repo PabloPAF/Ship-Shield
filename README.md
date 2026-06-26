@@ -448,6 +448,34 @@ pytest            # run from the repo root
 
 Both apps read from the same `secrets.toml`. Without a MarineTraffic key, all telemetry checks use the local `maritime_registry.json` — all demo scenarios work fully offline.
 
+### Optional — a branded local URL (`ship-shield.local`)
+
+For demos you can serve the app under a real-looking hostname instead of `localhost`.
+This is a **local-only alias** on your own machine (it resolves to `127.0.0.1`); it is
+not a public domain and needs no DNS registration.
+
+1. Map the hostname to your machine (macOS / Linux):
+   ```bash
+   sudo nano /etc/hosts
+   # add this line:
+   127.0.0.1   ship-shield.local
+   ```
+2. Flush the DNS cache (macOS):
+   ```bash
+   sudo dscacheutil -flushcache && sudo killall -HUP mDNSResponder
+   ```
+3. Start the server bound to all local interfaces:
+   ```bash
+   uvicorn bl_scanner_app:app --reload --host 0.0.0.0 --port 8502
+   ```
+4. Open:
+   - B/L scanner: `http://ship-shield.local:8502/`
+   - AP mailbox:  `http://ship-shield.local:8502/mailbox`
+
+The app's links are host-agnostic, so nothing else changes. For a genuinely public,
+HTTPS URL (e.g. `app.ship-shield.com`) you'd register a real domain and put the app
+behind a reverse proxy such as Caddy or Nginx with a TLS certificate.
+
 ---
 
 ## UI
