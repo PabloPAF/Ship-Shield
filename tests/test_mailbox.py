@@ -36,6 +36,7 @@ EXPECTED_VERDICT = {
     "sanctioned": "BLOCKED",# clean telemetry, but vessel/carrier is sanctioned (Layer 4)
     "vessel_risk": "REVIEW", # clean telemetry, but vessel has PSC detentions (Layer 2 enrichment)
     "entity_fail": "BLOCKED",# clean telemetry, but vendor is dissolved / VAT invalid (Layer 4)
+    "amount_outlier": "REVIEW", # clean, but amount is a per-vendor statistical outlier
 }
 
 # The single telemetry check expected to FAIL for each fraud scenario.
@@ -66,7 +67,7 @@ def test_inbox_manifest_has_all_emails():
     r = client.get("/mailbox/emails")
     assert r.status_code == 200
     emails = r.json()
-    assert len(emails) == 14
+    assert len(emails) == 15
     assert {e["id"] for e in emails} == set(EXPECTED_VERDICT)
     for e in emails:
         assert e["invoice"]["number"]
@@ -244,6 +245,24 @@ def test_entity_normalization_and_near_match():
     assert verify_entity("Atlantic Shipping B.V.")["status"] == "PASS"   # punctuation variant
     near = verify_entity("Atlantic Shippng BV")                          # typosquat
     assert near["status"] == "WARN" and "impersonation" in near["detail"].lower()
+
+
+# ── Layer 2 addendum: per-vendor amount anomaly (pandas baseline) ───────────
+
+def test_amount_outlier_review():
+    data = client.post("/mailbox/check", json={"id": "amount_outlier"}).json()
+    assert data["amount_anomaly"]["status"] == "WARN"
+    assert data["verdict"] == "REVIEW"
+
+def test_clean_amounts_within_baseline():
+    for eid in ("clean1", "clean2"):
+        assert client.post("/mailbox/check", json={"id": eid}).json()["amount_anomaly"]["status"] == "PASS"
+
+def test_amount_anomaly_unit():
+    from amount_anomaly import assess_amount
+    assert assess_amount("Atlantic Shipping BV", "250,000.00")["status"] == "WARN"
+    assert assess_amount("Atlantic Shipping BV", "31,800.00")["status"] == "PASS"
+    assert assess_amount("Unknown Vendor Ltd", "10,000") is None   # no baseline → skipped
 
 
 # ── Layer 0: document hygiene (active/hidden content in attachments) ─────────

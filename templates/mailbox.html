@@ -236,6 +236,8 @@ function showPanel(e,d){
       <div><div class="cf">${esc(c.field)}</div><div class="cd">${esc(c.detail)}</div></div></div>`).join("");
   const vrHtml=d.vessel_risk?`<div class="check"><span class="st ${esc(d.vessel_risk.status)}">${esc(d.vessel_risk.status)}</span>
       <div><div class="cf">vessel_risk (Equasis / PSC)</div><div class="cd">${esc(d.vessel_risk.detail)}</div></div></div>`:"";
+  const aaHtml=d.amount_anomaly?`<div class="check"><span class="st ${esc(d.amount_anomaly.status)}">${esc(d.amount_anomaly.status)}</span>
+      <div><div class="cf">amount_anomaly (per-vendor baseline)</div><div class="cd">${esc(d.amount_anomaly.detail)}</div></div></div>`:"";
   const bankHtml=d.bank?`<div class="seg">Layer 3 — Vendor bank-account history</div>
       <div class="check"><span class="st ${esc(d.bank.status)}">${esc(d.bank.status)}</span>
       <div><div class="cf">${esc(d.bank.field)}</div><div class="cd">${esc(d.bank.detail)}</div></div></div>`:"";
@@ -258,7 +260,7 @@ function showPanel(e,d){
     ${vessel}
     ${hygHtml}
     <div class="seg">Layer 1 — Email header analysis (VEC)</div>${vecHtml}
-    <div class="seg">Layer 2 — Physical telemetry validation</div>${telHtml}${vrHtml}
+    <div class="seg">Layer 2 — Physical telemetry validation</div>${telHtml}${vrHtml}${aaHtml}
     ${bankHtml}${bvHtml}
     ${cpHtml}
     <div class="src">Source: ${esc((tel.source||"").replace(/_/g," "))} · ${tel.checks.length} telemetry checks, ${vec.flags.length} header flags · engine: telemetry_validator.py + email_ingestor.py + vendor_ledger.py</div>`;

@@ -35,6 +35,7 @@ from sanctions_screen import screen_counterparty
 from vessel_risk import assess_vessel
 from entity_verify import verify_entity
 from bank_enrich import enrich_bank
+from amount_anomaly import assess_amount
 import email_forensics
 import audit_log
 
@@ -435,6 +436,9 @@ async def mailbox_check(req: CheckRequest):
         vessel_name=telemetry.get("vessel_name", "") or "",
         equasis_api_key=_read_secret("EQUASIS_API_KEY"),
     )
+    # Layer 2 (addendum) — per-vendor amount anomaly (pandas baseline).
+    amount_anomaly = assess_amount(entry.get("invoice", {}).get("vendor", ""),
+                                   entry.get("invoice", {}).get("total"))
 
     # Combined verdict — a HIGH email-header flag or a bank-account change escalates to BLOCKED
     verdict = telemetry.get("verdict", "REVIEW")
@@ -468,8 +472,8 @@ async def mailbox_check(req: CheckRequest):
         elif c["status"] == "WARN" and verdict == "CLEAR":
             verdict = "REVIEW"
             risk = max(risk, 0.3)
-    if vessel_risk:
-        if vessel_risk["status"] == "WARN" and verdict == "CLEAR":
+    for w in (vessel_risk, amount_anomaly):
+        if w and w["status"] == "WARN" and verdict == "CLEAR":
             verdict = "REVIEW"
             risk = max(risk, 0.3)
 
@@ -509,6 +513,7 @@ async def mailbox_check(req: CheckRequest):
         "bank": bank,
         "bank_vop": bank_vop,
         "vessel_risk": vessel_risk,
+        "amount_anomaly": amount_anomaly,
         "counterparty": counterparty,
         "risk_score": round(risk, 2),
         "vec": vec,

@@ -1,0 +1,9 @@
+{
+  "_note": "Per-vendor historical invoice amounts (mock). amount_anomaly.py uses pandas to derive a mean/std baseline per vendor and flags statistical outliers. In production these samples come from the AP system's payment history.",
+  "Atlantic Shipping BV": [31800, 30200, 31000, 29500, 33000, 28900, 32400, 30600],
+  "Nordic Freight GmbH": [88000, 90000, 86000, 92000, 84000, 89000],
+  "Iberian Cargo SL": [54000, 49500, 58000, 52000, 55000, 51000],
+  "Volga Maritime OOO": [45000, 44000, 46000, 43000],
+  "Old Salt Shipping Ltd": [60000, 58000, 62000, 59000],
+  "Ghostline Logistics Ltd": [33000, 32000, 34000, 31000]
+}

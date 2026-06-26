@@ -266,7 +266,7 @@ ShipShield/
 ├── templates/
 │   ├── bl_index.html      # B/L scanner frontend — single-file, no build step
 │   └── mailbox.html        # Outlook-style AP mailbox (HTML-escaped renderer)
-├── mailbox_inbox/          # Demo .eml inbox + inbox.json manifest
+├── mailbox_inbox/          # Demo .eml inbox + inbox.json manifest (15 scenarios)
 ├── telemetry_validator.py  # Layer 2 — physical telemetry (AIS port call / cargo / DWT / dates)
 ├── email_ingestor.py       # Layer 1 — VEC email header analysis + attachment extraction
 ├── email_forensics.py      # Layer 1 — look-alike domain, homoglyph & zero-width detection
@@ -276,12 +276,14 @@ ShipShield/
 ├── sanctions_screen.py     # Layer 4 — sanctions / dark-fleet screening
 ├── entity_verify.py        # Layer 4 — VAT (VIES) + commercial-register verification
 ├── vessel_risk.py          # Layer 2+ — Equasis / Port State Control enrichment
+├── amount_anomaly.py       # Layer 2+ — per-vendor amount outlier (pandas baseline)
 ├── audit_log.py            # Tamper-evident, hash-chained audit log
 ├── seed_vendor_ledger.py · seed_bank_accounts.py   # rebuild hash-only data stores
 ├── utils.py · analytics.py · app.py
 ├── data/                   # Mock datasets (code-coupled, read by the modules)
 │   ├── maritime_registry.json   # Mock AIS registry (6 vessels keyed by MMSI)
 │   ├── sanctions_list.json · vessel_risk.json · company_registry.json
+│   ├── vendor_baselines.json    # per-vendor amount baselines (pandas)
 │   └── vendor_ledger.json · account_registry.json   # hash-only (safe to commit)
 ├── tests/test_mailbox.py   # Pytest suite (run `pytest` from repo root); conftest.py at root
 ├── docs/                   # context.md (architecture) · swagger.json (MarineTraffic API ref)
@@ -332,6 +334,7 @@ review-grade signals fire, otherwise **CLEAR**.
 | Invoice/dock date drift (post/ante-dating) | 2 | 0.55 | BLOCK |
 | Late agency invoice (> 14 days) | 2 | 0.50 | BLOCK |
 | Vessel risk — PSC detentions / flag of convenience | 2+ | 0.30 | REVIEW |
+| Amount outlier vs the vendor's own baseline (pandas) | 2+ | 0.30 | REVIEW |
 | Unverifiable — API down, no baseline, new incorporation, VoP n/a | any | 0.30 | REVIEW |
 | Email header — MEDIUM/LOW (free provider, urgency, zero-width) | 1 | 0.30 | REVIEW* |
 
