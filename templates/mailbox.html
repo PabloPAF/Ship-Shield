@@ -30,6 +30,11 @@
   .mbxowner .avatar2{width:30px; height:30px; border-radius:50%; background:#5c2d91; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:12px; flex-shrink:0;}
   .mbxname{font-size:13px; font-weight:600; color:var(--ms-dark);}
   .mbxmail{font-size:11px; color:var(--ms-grey);}
+  .waffle{display:flex; align-items:center;} .ico-waffle{width:18px; height:18px; color:#fff;}
+  .navico{width:17px; height:17px; flex-shrink:0; color:#5b6b8c;}
+  .folder.active .navico{color:var(--ms-blue);}
+  .cmdico{width:15px; height:15px; flex-shrink:0;}
+  .clip{width:13px; height:13px; flex-shrink:0; color:var(--ms-grey2); vertical-align:-2px;}
   /* ribbon toolbar */
   .ribbon{height:40px; background:#fff; border-bottom:1px solid var(--ms-line); display:flex; align-items:center; gap:2px; padding:0 10px; flex-shrink:0;}
   .ribbon .rtabs{display:flex; gap:2px; margin-right:14px;}
@@ -133,8 +138,36 @@
 </style>
 </head>
 <body>
+  <!-- Generic line-icon sprite (open Feather-style glyphs, drawn here — not proprietary artwork) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-waffle" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <rect x="3" y="3" width="4" height="4" rx="1"/><rect x="10" y="3" width="4" height="4" rx="1"/><rect x="17" y="3" width="4" height="4" rx="1"/>
+      <rect x="3" y="10" width="4" height="4" rx="1"/><rect x="10" y="10" width="4" height="4" rx="1"/><rect x="17" y="10" width="4" height="4" rx="1"/>
+      <rect x="3" y="17" width="4" height="4" rx="1"/><rect x="10" y="17" width="4" height="4" rx="1"/><rect x="17" y="17" width="4" height="4" rx="1"/>
+    </symbol>
+    <symbol id="i-inbox" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol>
+    <symbol id="i-sent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></symbol>
+    <symbol id="i-drafts" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+    <symbol id="i-junk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+    <symbol id="i-archive" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></symbol>
+    <symbol id="i-notes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></symbol>
+    <symbol id="i-clip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 9.5"/></symbol>
+    <symbol id="i-block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="9"/><line x1="5.6" y1="5.6" x2="18.4" y2="18.4"/></symbol>
+  </svg>
   <div class="topbar">
-    <span class="waffle">▦</span><span class="appname">Outlook</span>
+    <span class="waffle"><svg class="ico-waffle"><use href="#i-waffle"/></svg></span><span class="appname">Outlook</span>
     <span class="org">SuccessfulMockMaritimeCarrier</span>
     <div class="search">🔍&nbsp; Search mail</div>
     <div class="right">
@@ -160,19 +193,20 @@
     <div class="nav">
       <div class="newmail">✉&nbsp; New mail</div>
       <div class="navsec">★ Favorites</div>
-      <div class="folder active">📥 Inbox <span class="count" id="inboxCount"></span></div>
-      <div class="folder">🛡 Verified</div>
-      <div class="folder">🚫 Blocked</div>
+      <div class="folder active"><svg class="navico"><use href="#i-inbox"/></svg> Inbox <span class="count" id="inboxCount"></span></div>
+      <div class="folder"><svg class="navico"><use href="#i-sent"/></svg> Sent Items</div>
+      <div class="folder"><svg class="navico"><use href="#i-drafts"/></svg> Drafts</div>
       <div class="acctline">▾ accountspayable@successfulmockmaritimecarrier.com</div>
-      <div class="folder">📥 Inbox</div>
-      <div class="folder">📝 Drafts</div>
-      <div class="folder">📤 Sent Items</div>
-      <div class="folder">🗑 Deleted Items</div>
-      <div class="folder">⚠ Junk Email</div>
-      <div class="folder">📁 Archive</div>
-      <div class="folder">🗒 Notes</div>
+      <div class="folder"><svg class="navico"><use href="#i-inbox"/></svg> Inbox</div>
+      <div class="folder"><svg class="navico"><use href="#i-drafts"/></svg> Drafts</div>
+      <div class="folder"><svg class="navico"><use href="#i-sent"/></svg> Sent Items</div>
+      <div class="folder"><svg class="navico"><use href="#i-trash"/></svg> Deleted Items</div>
+      <div class="folder"><svg class="navico"><use href="#i-junk"/></svg> Junk Email</div>
+      <div class="folder"><svg class="navico"><use href="#i-archive"/></svg> Archive</div>
+      <div class="folder"><svg class="navico"><use href="#i-notes"/></svg> Notes</div>
       <div class="hd">ShipShield add-in</div>
-      <div class="folder">🛡 Verified</div><div class="folder">🚫 Blocked</div>
+      <div class="folder"><svg class="navico"><use href="#i-shield"/></svg> Verified</div>
+      <div class="folder"><svg class="navico"><use href="#i-block"/></svg> Blocked</div>
       <div class="addacct">+ Add account</div>
     </div>
     <div class="list">
@@ -228,8 +262,10 @@ function renderList(){
     d.className="msg"+(e.unread?" unread":"")+(e.id===activeId?" active":"");
     d.onclick=()=>openEmail(e.id);
     d.innerHTML=`<div class="bar"></div><div class="av" style="background:${esc(e.color)}">${esc(initials(e.from))}</div>
-      <div class="body"><div class="l1"><span class="from">${esc(senderName(e.from))}</span><span class="time">${esc(e.time)}</span></div>
-      <div class="subj">${esc(e.subject)}</div><div class="prev">📎 ${esc(e.invoice.number)}.pdf — ${esc(e.invoice.vessel)}</div></div>`;
+      <div class="body"><div class="l1"><span class="from">${esc(senderName(e.from))}</span>
+        <svg class="clip" title="Has attachment"><use href="#i-clip"/></svg><span class="time">${esc(e.time)}</span></div>
+      <div class="subj">${esc(e.subject)}</div>
+      <div class="prev"><svg class="clip"><use href="#i-clip"/></svg> ${esc(e.invoice.number)}.pdf — ${esc(e.invoice.vessel)}</div></div>`;
     c.appendChild(d);
   });
 }
