@@ -47,7 +47,7 @@ INBOX_DIR = Path(__file__).parent / "mailbox_inbox"
 LOGO_DIR = Path(__file__).parent / "logo"
 SECRETS_PATH = Path(__file__).parent / ".streamlit" / "secrets.toml"
 
-SUPPORTED_MIME = {"image/jpeg", "image/jpg", "image/png", "image/webp", "image/tiff"}
+SUPPORTED_MIME = {"image/jpeg", "image/jpg", "image/png", "image/webp", "image/tiff", "application/pdf"}
 
 BL_EXTRACTION_PROMPT = """You are a maritime document expert. Extract all logistics identifiers from this Bill of Lading image.
 
@@ -108,6 +108,19 @@ def _read_secret(key: str) -> str | None:
         return secrets.get(key)
     except FileNotFoundError:
         return None
+
+
+def _pdf_first_page_png(data: bytes) -> bytes:
+    """Rasterise the first page of a PDF B/L to PNG bytes for the vision model."""
+    try:
+        import fitz  # PyMuPDF
+    except ImportError:
+        raise HTTPException(status_code=503,
+                            detail="PDF upload needs PyMuPDF on the server (pip install pymupdf).")
+    doc = fitz.open(stream=data, filetype="pdf")
+    if doc.page_count == 0:
+        raise HTTPException(status_code=422, detail="The PDF has no pages.")
+    return doc.load_page(0).get_pixmap(dpi=160).tobytes("png")
 
 
 def _preprocess(image_bytes: bytes) -> bytes:
@@ -226,6 +239,9 @@ async def scan_bl(file: UploadFile = File(...)):
         raise HTTPException(status_code=503, detail="GROQ_API_KEY is not configured on the server.")
 
     image_bytes = await file.read()
+    # PDF B/Ls are rasterised to an image first, then extracted like any scan.
+    if content_type == "application/pdf" or image_bytes[:5] == b"%PDF-":
+        image_bytes = _pdf_first_page_png(image_bytes)
 
     # Step 1 — extract B/L fields
     try:
