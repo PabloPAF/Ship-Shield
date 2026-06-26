@@ -1,4 +1,4 @@
-# SmartInvoiceAI — Physical Telemetry Validation Engine
+# ShipShield — Physical Telemetry Validation Engine
 
 > Maritime invoice fraud detection that checks not just *what* a document says, but *whether the shipment actually happened*.
 
@@ -11,7 +11,7 @@ Maritime shipping is a prime target for **Vendor Email Compromise (VEC)** and **
 
 ## The Solution
 
-SmartInvoiceAI cross-references invoice and B/L data against **live AIS vessel tracking** to confirm the shipment physically occurred. It catches what document-only tools miss: ghost voyages, duplicate sales, DWT overstatements, and post/ante-dated cargo — plus email header anomalies that signal VEC attacks.
+ShipShield cross-references invoice and B/L data against **live AIS vessel tracking** to confirm the shipment physically occurred. It catches what document-only tools miss: ghost voyages, duplicate sales, DWT overstatements, and post/ante-dated cargo — plus email header anomalies that signal VEC attacks.
 
 ![Mail-demo](image-1.png)
 
@@ -23,20 +23,20 @@ SmartInvoiceAI cross-references invoice and B/L data against **live AIS vessel t
 
 ### 1. Clone the repo
 ```bash
-git clone https://github.com/JaanuNan/SmartInvoiceAI
-cd SmartInvoiceAI
+git clone https://github.com/PabloPAF/Ship-Shield
+cd Ship-Shield
 ```
 
 ### 2. Configure secrets
 ```toml
-# secrets.toml
+# .streamlit/secrets.toml
 GROQ_API_KEY = "your_groq_api_key"
 MARINETRAFFIC_API_KEY = "your_marinetraffic_api_key" 
 ```
 
 ### 3. Run
 ```bash
-uvicorn bol_app:app --reload --port 8502
+uvicorn bl_scanner_app:app --reload --port 8502
 ```
 
 Then open your browser and drag-drop a Bill of Lading image (JPEG / PNG / WebP) or upload a `.eml` email file. You'll get a **CLEAR / REVIEW / BLOCKED** verdict with a per-flag risk score breakdown in seconds.
@@ -50,9 +50,9 @@ Then open your browser and drag-drop a Bill of Lading image (JPEG / PNG / WebP) 
 | Backend | FastAPI + Uvicorn |
 | Frontend | Vanilla HTML/CSS/JS |
 | AI Model | LLaMA-4 Scout 17B via Groq API |
-| ML | Isolation Forest (scikit-learn) |
+| ML | z-score outlier detection (NumPy / pandas) |
 | Validation | Pydantic v2 |
-| AIS Data | MarineTraffic REST API |
+| AIS Data | MarineTraffic REST API + AISStream (real-time) |
 | Email Parsing | Python `imaplib` / RFC 2822 |
 
 ---
