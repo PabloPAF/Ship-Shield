@@ -22,7 +22,7 @@ import re
 from datetime import date
 from pathlib import Path
 
-REG_PATH = Path(__file__).parent / "company_registry.json"
+REG_PATH = Path(__file__).parent / "data" / "company_registry.json"
 _DEAD_STATUSES = {"dissolved", "insolvent", "liquidation", "struck off", "struck-off", "inactive"}
 
 

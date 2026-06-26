@@ -15,7 +15,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-RISK_PATH = Path(__file__).parent / "vessel_risk.json"
+RISK_PATH = Path(__file__).parent / "data" / "vessel_risk.json"
 
 # Flags commonly associated with flags-of-convenience / weaker oversight.
 _FOC_FLAGS = {"Panama", "Liberia", "Marshall Islands", "Comoros", "Palau", "Togo", "Cook Islands"}

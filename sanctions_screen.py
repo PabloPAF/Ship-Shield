@@ -18,7 +18,7 @@ import json
 import re
 from pathlib import Path
 
-LIST_PATH = Path(__file__).parent / "sanctions_list.json"
+LIST_PATH = Path(__file__).parent / "data" / "sanctions_list.json"
 
 
 def _norm(s: str) -> str:

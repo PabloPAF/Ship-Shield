@@ -4,7 +4,7 @@ import os
 import requests
 from datetime import datetime, timedelta
 
-REGISTRY_PATH = os.path.join(os.path.dirname(__file__), "maritime_registry.json")
+REGISTRY_PATH = os.path.join(os.path.dirname(__file__), "data", "maritime_registry.json")
 MT_BASE = "https://services.marinetraffic.com/api"
 
 _AIS_WS_URL = "wss://stream.aisstream.io/v0/stream"

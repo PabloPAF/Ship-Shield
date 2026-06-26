@@ -37,7 +37,7 @@ import re
 from datetime import date
 from pathlib import Path
 
-LEDGER_PATH = Path(__file__).parent / "vendor_ledger.json"
+LEDGER_PATH = Path(__file__).parent / "data" / "vendor_ledger.json"
 SECRETS_PATH = Path(__file__).parent / ".streamlit" / "secrets.toml"
 
 # Dev-only fallback pepper. Production MUST set SHIPSHIELD_LEDGER_PEPPER so that

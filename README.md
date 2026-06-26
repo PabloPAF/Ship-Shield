@@ -66,7 +66,7 @@ After extraction, the invoice's logistics claims are verified against AIS vessel
 | HTTP client | `requests` |
 | Live AIS data (real-time) | AISStream WebSocket — `wss://stream.aisstream.io/v0/stream` (free) |
 | Live AIS data (historical) | MarineTraffic REST API — `GET /portcalls/{api_key}` |
-| Mock AIS data | `maritime_registry.json` (3 vessels, MMSI-keyed) |
+| Mock AIS data | `data/maritime_registry.json` (6 vessels, MMSI-keyed) |
 | Language | Python 3.10+ |
 | Configuration | `.streamlit/secrets.toml` |
 
@@ -266,7 +266,7 @@ ShipShield/
 ├── templates/
 │   ├── bl_index.html      # B/L scanner frontend — single-file, no build step
 │   └── mailbox.html        # Outlook-style AP mailbox (HTML-escaped renderer)
-├── mailbox_inbox/          # Demo .eml inbox + inbox.json manifest (14 scenarios)
+├── mailbox_inbox/          # Demo .eml inbox + inbox.json manifest
 ├── telemetry_validator.py  # Layer 2 — physical telemetry (AIS port call / cargo / DWT / dates)
 ├── email_ingestor.py       # Layer 1 — VEC email header analysis + attachment extraction
 ├── email_forensics.py      # Layer 1 — look-alike domain, homoglyph & zero-width detection
@@ -276,20 +276,20 @@ ShipShield/
 ├── sanctions_screen.py     # Layer 4 — sanctions / dark-fleet screening
 ├── entity_verify.py        # Layer 4 — VAT (VIES) + commercial-register verification
 ├── vessel_risk.py          # Layer 2+ — Equasis / Port State Control enrichment
-├── seed_vendor_ledger.py   # rebuild vendor_ledger.json (hash-only)
-├── seed_bank_accounts.py   # rebuild account_registry.json (hash-only VoP directory)
-├── maritime_registry.json  # Mock AIS registry (vessels keyed by MMSI)
-├── sanctions_list.json     # Mock consolidated sanctions data
-├── vessel_risk.json        # Mock Equasis/PSC data
-├── company_registry.json   # Mock VAT/commercial-register data
-├── vendor_ledger.json      # Hash-only known-account ledger (safe to commit)
-├── account_registry.json   # Hash-only Verification-of-Payee directory
+├── audit_log.py            # Tamper-evident, hash-chained audit log
+├── seed_vendor_ledger.py · seed_bank_accounts.py   # rebuild hash-only data stores
 ├── utils.py · analytics.py · app.py
-├── test_mailbox.py         # Pytest suite for the mailbox + all layers
+├── data/                   # Mock datasets (code-coupled, read by the modules)
+│   ├── maritime_registry.json   # Mock AIS registry (6 vessels keyed by MMSI)
+│   ├── sanctions_list.json · vessel_risk.json · company_registry.json
+│   └── vendor_ledger.json · account_registry.json   # hash-only (safe to commit)
+├── tests/test_mailbox.py   # Pytest suite (run `pytest` from repo root); conftest.py at root
+├── docs/                   # context.md (architecture) · swagger.json (MarineTraffic API ref)
 ├── legal/                  # GDPR Terms of Use & consent (DE authoritative + EN)
+├── logo/  ·  templates/  ·  Results/ (sample CSV/JSON exports)
 ├── requirements.txt
 ├── .streamlit/secrets.toml # API keys + ledger pepper (gitignored)
-├── .Dataset/  ·  Results/
+└── .Dataset/               # Sample invoice/B/L images
 ```
 
 ### Validation layers

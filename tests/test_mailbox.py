@@ -1,24 +1,24 @@
 """
 Tests for the ShipShield Accounts Payable mailbox endpoints.
 
-Run:
+Run from the repo root:
     pip install -r requirements.txt pytest httpx
-    pytest test_mailbox.py -v
+    pytest -v          # discovers tests/
 
-These exercise the FastAPI routes added to bl_scanner_app.py:
-    GET  /mailbox          → serves the Outlook-style inbox
-    GET  /mailbox/emails   → inbox.json manifest (8 demo scenarios)
-    POST /mailbox/check     → Layer 1 (VEC headers) + Layer 2 (telemetry)
+These exercise the FastAPI routes in bl_scanner_app.py (full layer stack) plus the
+pure validation helpers. A root conftest.py puts the repo root on sys.path.
 
-No API keys required: telemetry runs in mock mode against maritime_registry.json.
+No API keys required: every layer runs in mock mode against data/*.json.
 Requires Python 3.11+ (bl_scanner_app imports the stdlib `tomllib`).
 """
+import pathlib
 import pytest
 from fastapi.testclient import TestClient
 
 from bl_scanner_app import app
 
 client = TestClient(app)
+ROOT = pathlib.Path(__file__).resolve().parent.parent   # repo root
 
 # Expected combined verdict per demo email id (mock mode).
 EXPECTED_VERDICT = {
@@ -173,8 +173,7 @@ def test_bl_has_no_vop():
     assert client.post("/mailbox/check", json={"id": "bl_clean"}).json()["bank_vop"] is None
 
 def test_account_registry_stores_no_raw_ibans():
-    import pathlib
-    raw = pathlib.Path("account_registry.json").read_text()
+    raw = (ROOT / "data" / "account_registry.json").read_text()
     for iban in ("NL91ABNA0417164300", "DE89370400440532013000", "GB29NWBK60161331926819"):
         assert iban not in raw
 
@@ -182,8 +181,7 @@ def test_account_registry_stores_no_raw_ibans():
 # ── Security: renderer must HTML-escape all attacker-controlled content ──────
 
 def test_renderer_escapes_dynamic_content():
-    import pathlib
-    html = pathlib.Path("templates/mailbox.html").read_text()
+    html = (ROOT / "templates" / "mailbox.html").read_text()
     assert "const esc=" in html
     # these attacker-controlled fields must never be interpolated unescaped
     for raw in ("${e.subject}", "${inv.vendor}", "${inv.iban}", "${c.detail}",
@@ -215,8 +213,7 @@ def test_audit_chain_detects_tampering(tmp_path, monkeypatch):
 
 def test_audit_log_is_pii_light():
     client.post("/mailbox/check", json={"id": "vec"})
-    import pathlib
-    raw = pathlib.Path("audit_log.jsonl").read_text()
+    raw = (ROOT / "audit_log.jsonl").read_text()
     assert "GB29NWBK60161331926819" not in raw   # no raw IBANs
     assert "Dear Finance Team" not in raw          # no email bodies
 
@@ -310,7 +307,6 @@ def test_clean_invoice_matches_confirmed_account():
     assert "****" in data["bank"]["masked"]            # IBAN is masked, never raw
 
 def test_ledger_stores_no_raw_ibans():
-    import json, pathlib
-    raw = pathlib.Path("vendor_ledger.json").read_text()
+    raw = (ROOT / "data" / "vendor_ledger.json").read_text()
     for iban in ("NL91ABNA0417164300", "DE89370400440532013000", "ES9121000418450200051332"):
         assert iban not in raw                         # only peppered hashes are stored

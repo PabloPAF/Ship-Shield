@@ -13,8 +13,8 @@ from pathlib import Path
 
 from vendor_ledger import hash_iban, iban_country
 
-OUT = Path(__file__).parent / "account_registry.json"
-REGISTRY = json.loads((Path(__file__).parent / "maritime_registry.json").read_text(encoding="utf-8"))
+OUT = Path(__file__).parent / "data" / "account_registry.json"
+REGISTRY = json.loads((Path(__file__).parent / "data" / "maritime_registry.json").read_text(encoding="utf-8"))
 
 # Known-good accounts: each carrier's registered account is held by that carrier.
 accounts = {}

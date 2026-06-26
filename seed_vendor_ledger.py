@@ -14,7 +14,7 @@ from pathlib import Path
 
 from vendor_ledger import LEDGER_PATH, hash_iban, iban_country, normalize_vendor
 
-REGISTRY_PATH = Path(__file__).parent / "maritime_registry.json"
+REGISTRY_PATH = Path(__file__).parent / "data" / "maritime_registry.json"
 
 
 def main():

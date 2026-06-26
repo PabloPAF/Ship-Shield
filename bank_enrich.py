@@ -24,7 +24,7 @@ from pathlib import Path
 
 from vendor_ledger import hash_iban, iban_country, mask_iban, normalize_vendor
 
-ACCT_PATH = Path(__file__).parent / "account_registry.json"
+ACCT_PATH = Path(__file__).parent / "data" / "account_registry.json"
 
 
 def _load() -> dict:
