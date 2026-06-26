@@ -4,7 +4,9 @@ A maritime logistics invoice fraud detection system that combines AI-powered doc
 
 ShipShield is built on top of the open-source SmartInvoiceAI invoice parser (credited under License), extended with a maritime telemetry validation layer and an Accounts Payable mailbox.
 
-[![Try Live Demo](https://img.shields.io/badge/🚀_Try_Live_Demo-Click_Here-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://smartinvoiceai.streamlit.app/)
+**Run locally:** `uvicorn bl_scanner_app:app --reload --port 8502` → B/L scanner at
+`http://localhost:8502/`, Accounts Payable mailbox at `http://localhost:8502/mailbox`.
+Works fully offline against bundled mock data — no API keys required for the demo.
 
 ---
 
@@ -12,43 +14,42 @@ ShipShield is built on top of the open-source SmartInvoiceAI invoice parser (cre
 
 Maritime logistics invoices are a prime target for **Vendor Email Compromise (VEC)** fraud. An attacker compromises a vendor's email, monitors active payment threads, and injects a fraudulent invoice — structurally identical to the real one, with only the IBAN (bank account number) swapped. Document-level tools return no anomalies because the document *is* clean.
 
-This system catches the fraud at two layers:
+ShipShield catches the fraud across **five layers** — any single hard failure blocks
+the payment, unverifiable signals resolve to REVIEW, and nothing is a black box:
 
-**Layer 1 — Email Header Analysis**
-Before the invoice is even opened, the email carrying it is parsed for VEC indicators:
-- Reply-to domain differs from sender domain (primary attack pattern)
-- Sender using a consumer email provider (Gmail, Yahoo) while claiming to be a shipping company
-- Urgency / payment-redirect language in the subject line
+- **Layer 0 — Document hygiene.** Is the attachment itself weaponised? (embedded JavaScript, auto-run actions, macros)
+- **Layer 1 — Email / VEC.** Is the sender spoofed? (reply-to mismatch, look-alike & homoglyph domains, zero-width text, urgency)
+- **Layer 2 — Physical telemetry.** Did the event actually happen? (AIS port call, cargo-vessel compatibility, DWT capacity, date drift, duplicate voyage) — plus vessel risk (Equasis/PSC detentions) and a per-vendor amount-anomaly check
+- **Layer 3 — Bank account.** Has the IBAN changed for a known vendor, and does the account actually belong to them? (hashed-ledger change-detection + Verification of Payee)
+- **Layer 4 — Counterparty.** Is the vendor real, valid and not sanctioned? (sanctions / dark-fleet screening + VAT/commercial-register checks)
 
-**Layer 2 — Physical Telemetry Validation**
-After extraction, the invoice's logistics claims are verified against AIS vessel data:
-- Did the vessel actually dock at the claimed port? (verified via MarineTraffic AIS)
-- Is the invoice date consistent with the dock date? (Skuld Case A — post/ante-dating)
-- Is the cargo physically compatible with this vessel type? (Skuld Case B — tanker can't carry grain)
-- Has this voyage already been invoiced? (Skuld Case B — ghost cargo / duplicate sale)
-- Does the claimed cargo tonnage fit within vessel capacity? (Skuld Case C — DWT overstatement)
-- Was the invoice submitted suspiciously late? (Skuld Case D — fake agency invoice)
-- Does the IBAN match the registered carrier bank account? (VEC financial payload)
+Every verdict is graduated by risk weight, recorded in a **tamper-evident, hash-chained
+audit log**, and decided by transparent rules — so it is fully explainable.
 
 > "If the ship didn't dock, the payment doesn't clear."
+
+Three surfaces share the same engine: an **Accounts Payable mailbox** (Outlook-style
+inbox with a one-click cross-check), a **standalone B/L scanner** (drag-drop a Bill of
+Lading image), and a **6-tab Streamlit dashboard**.
 
 ---
 
 ## Features
 
-- **B/L scanner web app** — standalone FastAPI app: drag-drop a Bill of Lading image, get an instant authenticity verdict
+- **Accounts Payable mailbox** — Outlook-style inbox; one click cross-checks an invoice/B/L through all five layers and shows a per-layer breakdown
+- **B/L scanner web app** — standalone FastAPI app: drag-drop a Bill of Lading image, get a full-stack authenticity verdict
 - **6-tab Streamlit dashboard** — extraction, chatbot, fraud detection, telemetry validation, email ingestion
-- **LLaMA-4 Scout extraction** — vision-capable LLM via Groq API; multilingual (8+ languages); B/L-specific prompt extracts vessel, ports, cargo, tonnage
-- **z-score outlier anomaly detection** — unsupervised ML on invoice amount patterns
-- **Skuld Cases A–D** — four maritime fraud patterns from P&I Club case files
-- **VEC email detection** — `.eml` upload, IMAP live-mailbox fetch, or demo scenario — header forensics and attachment extraction
-- **AISStream live telemetry** — real-time vessel position check via WebSocket (free tier); falls back to mock registry
-- **MarineTraffic AIS integration** — historical port call verification; graceful fallback to mock registry
-- **Three-way verdict** — CLEAR / REVIEW (API unavailable) / BLOCKED with per-field breakdown and risk score
-- **10 built-in demo scenarios** in the Telemetry tab covering every fraud case
-- **Batch invoice processing** — multi-upload with per-image progress tracking
-- **Data export** — CSV and JSON with one click
-- **Chatbot** — natural language queries over extracted invoice data
+- **LLaMA-4 Scout extraction** — vision-capable LLM via Groq; multilingual (8+ languages); output is **schema-validated & prompt-injection-hardened** (treated as untrusted)
+- **Layer 0 document hygiene** — flags attachments with embedded JavaScript, auto-run actions or Office macros (quarantine before extraction)
+- **Layer 1 email forensics** — VEC header analysis + look-alike/typosquat domains, homoglyphs and zero-width characters
+- **Layer 2 physical telemetry** — Skuld Cases A–D against AIS, plus vessel risk (Equasis/PSC) and a **per-vendor amount-anomaly** check (pandas)
+- **Layer 3 bank** — hashed-IBAN ledger with **bank-account change-detection** + **Verification of Payee** (account holder ≠ vendor)
+- **Layer 4 counterparty** — **sanctions / dark-fleet** screening + **VAT (VIES) / commercial-register** verification (with near-match impersonation flag)
+- **Graduated risk scoring** — CLEAR / REVIEW / BLOCKED with per-indicator weights (see the IOC table)
+- **Security by design** — peppered HMAC of IBANs (never stored raw), data-minimised OSINT calls, HTML-escaped rendering (XSS), and a **tamper-evident, hash-chained audit log**
+- **GDPR-ready** — German-authoritative Terms of Use & data-processing consent (`legal/`)
+- **AIS data** — MarineTraffic (historical) + AISStream (real-time, free), graceful fallback to a mock registry; every enrichment API has an offline mock
+- **Chatbot, batch processing, CSV/JSON export** in the dashboard
 
 ---
 
@@ -242,18 +243,28 @@ Based on Skuld P&I Club maritime fraud case files:
 
 ## Demo Scenarios
 
-The Telemetry Validation tab has 10 built-in scenarios. Key examples:
+The Accounts Payable mailbox ships with **19 demo emails** (13 invoices + 6 Bills of
+Lading) — a mix of CLEAR, REVIEW and BLOCKED, with at least one example isolating each
+layer (clean on everything else, so the named signal is the decider):
 
-| Scenario | MMSI | Details | Verdict |
+| Email | Type | Decider | Verdict |
 |---|---|---|---|
-| CLEAR | 244170218 | Rotterdam · correct IBAN | CLEAR |
-| Port mismatch | 244170218 | Claims Port of Antwerp | BLOCKED |
-| Unknown vessel | 999999999 | Not in registry | BLOCKED |
-| IBAN hijack | 244170218 | Attacker's IBAN substituted | BLOCKED |
-| Duplicate voyage (Case B) | 244170218 | VOY-2026-441 already invoiced | BLOCKED |
-| Tanker + grain cargo (Case B) | 224143870 | Tanker invoiced for bulk grain | BLOCKED |
-| DWT exceeded (Case C) | 211456200 | Claims 50,000 MT, vessel max 45,000 | BLOCKED |
-| Late submission (Case D) | 211456200 | Invoice 20 days after dock date | BLOCKED |
+| Atlantic Explorer / Rotterdam | invoice | everything matches | ✅ CLEAR |
+| Baltic Carrier / Hamburg | invoice | everything matches | ✅ CLEAR |
+| "URGENT: Updated Banking Details" | invoice | VEC reply-to + look-alike domain + IBAN/VoP mismatch | 🚫 BLOCKED |
+| Active-content PDF | invoice | Layer 0 — attachment carries embedded JavaScript | 🚫 BLOCKED |
+| Port mismatch (claims Antwerp) | invoice | Layer 2 — port ≠ AIS dock | 🚫 BLOCKED |
+| Duplicate voyage | invoice | Layer 2 — voyage already invoiced | 🚫 BLOCKED |
+| Dissolved vendor | invoice | Layer 4 — company dissolved / VAT invalid | 🚫 BLOCKED |
+| Sanctioned vessel | invoice / B/L | Layer 4 — vessel/carrier on sanctions list | 🚫 BLOCKED |
+| Detained vessel | invoice | Layer 2+ — Port State Control detentions | ⚠️ REVIEW |
+| Amount outlier (€250k vs ~€31k) | invoice | Layer 2+ — per-vendor amount anomaly | ⚠️ REVIEW |
+| Tanker carrying grain | B/L | Layer 2 — cargo/vessel incompatible (Case B) | 🚫 BLOCKED |
+| DWT overstatement (60k > 45k) | B/L | Layer 2 — exceeds deadweight (Case C) | 🚫 BLOCKED |
+| Post-dated B/L | B/L | Layer 2 — date drift vs dock (Case A) | 🚫 BLOCKED |
+
+Current spread: **3 CLEAR · 2 REVIEW · 14 BLOCKED**. The Telemetry tab of the Streamlit
+dashboard additionally has 10 built-in payload scenarios.
 
 ---
 
@@ -339,6 +350,57 @@ review-grade signals fire, otherwise **CLEAR**.
 | Email header — MEDIUM/LOW (free provider, urgency, zero-width) | 1 | 0.30 | REVIEW* |
 
 \* Email MEDIUM/LOW flags only move a CLEAR verdict to REVIEW; they do not override a higher signal.
+
+---
+
+## External data sources (OSINT & live feeds)
+
+Each external source is reached through an API key with a **bundled offline mock
+fallback**, so every demo runs without keys. Data minimisation is enforced: only the
+identifier needed for a check is sent out — never the IBAN, never document contents.
+
+| Source | Used for | Layer | Key / config | Status | Offline mock |
+|---|---|---|---|---|---|
+| **MarineTraffic** REST API (`/portcalls`) | Historical vessel port calls | 2 | `MARINETRAFFIC_API_KEY` | ✅ live + fallback | `data/maritime_registry.json` |
+| **AISStream** WebSocket (`stream.aisstream.io`) | Real-time vessel position / port presence | 2 | `AISSTREAM_API_KEY` (free) | ✅ live + fallback | `data/maritime_registry.json` |
+| **Equasis** + Paris/Tokyo MoU PSC | Vessel ownership, class, flag, detention history | 2+ | `EQUASIS_API_KEY` | 🔌 integration-ready (mock today) | `data/vessel_risk.json` |
+| **OpenSanctions** / OFAC SDN / EU consolidated / UK OFSI / UN | Sanctions & dark-fleet screening (vendor, vessel, bank jurisdiction) | 4 | `SANCTIONS_API_KEY` | 🔌 integration-ready (mock today) | `data/sanctions_list.json` |
+| **EU VIES** + commercial registers (Handelsregister / Northdata / GLEIF / OpenCorporates) | VAT-ID validation + company existence/status | 4 | `VIES_API_KEY` | 🔌 integration-ready (mock today) | `data/company_registry.json` |
+| **Verification of Payee** (open-banking aggregator) | Account-holder ↔ vendor name match | 3 | `VOP_API_KEY` | 🔌 integration-ready (mock today) | `data/account_registry.json` (hash-only) |
+| **Groq — LLaMA-4 Scout** | Document/B-L field extraction + chatbot (external API, not OSINT) | — | `GROQ_API_KEY` | ✅ live (required for image extraction) | — |
+| **IMAP** (Gmail / Outlook / Yahoo / custom) | Pull unread invoice emails directly from a live mailbox | 1 | app password | ✅ live | demo `.eml` / generated samples |
+
+Legend: ✅ = live client implemented with mock fallback · 🔌 = key + adapter wired and
+mock-backed today; drop in the provider's client to go live.
+
+---
+
+## Where AI fits (and where it doesn't)
+
+ShipShield uses exactly one AI model — **LLaMA-4 Scout (vision LLM) via Groq** — in two
+places: **document extraction** (reading an invoice/B-L image into structured fields,
+multilingual) and the **chatbot**. That output is treated as *untrusted*: schema-validated
+and prompt-injection-hardened before use.
+
+Everything that produces the CLEAR / REVIEW / BLOCKED **verdict is deterministic** — rules
+plus a z-score statistic — not machine learning. In short: **AI is the eyes; transparent,
+auditable rules backed by physical reality are the judge.** Even a fooled or adversarial
+extraction is still caught downstream by telemetry, sanctions and the bank checks.
+
+---
+
+## Testing
+
+A pytest suite lives in **`tests/test_mailbox.py`** (a root `conftest.py` puts the repo
+root on `sys.path`). It mixes unit tests of the pure functions (`_validate_bl`,
+`_map_cargo_type`, `verify_entity`, `amount_anomaly`, the audit-log hash chain, the
+"no raw IBANs stored" guarantees) with integration tests that drive the FastAPI app via
+`TestClient` over all 19 demo emails.
+
+```bash
+pip install -r requirements.txt pytest httpx
+pytest            # run from the repo root
+```
 
 ---
 
