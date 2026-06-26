@@ -30,14 +30,30 @@
   .mbxowner .avatar2{width:30px; height:30px; border-radius:50%; background:#5c2d91; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:12px; flex-shrink:0;}
   .mbxname{font-size:13px; font-weight:600; color:var(--ms-dark);}
   .mbxmail{font-size:11px; color:var(--ms-grey);}
-  .app{display:flex; height:calc(100vh - 48px);}
-  .nav{width:200px; background:#f3f2f1; border-right:1px solid var(--ms-line); padding:12px 0; flex-shrink:0; overflow:auto;}
-  .newmail{margin:0 12px 12px; background:#fff; border:1px solid var(--ms-line); border-radius:4px; padding:7px 10px; font-weight:600; color:var(--ms-blue); display:flex; align-items:center; gap:8px;}
-  .folder{padding:7px 12px 7px 16px; display:flex; align-items:center; gap:10px; cursor:pointer; color:var(--ms-dark);}
+  /* ribbon toolbar */
+  .ribbon{height:40px; background:#fff; border-bottom:1px solid var(--ms-line); display:flex; align-items:center; gap:2px; padding:0 10px; flex-shrink:0;}
+  .ribbon .rtabs{display:flex; gap:2px; margin-right:14px;}
+  .ribbon .rtab{font-size:13px; color:var(--ms-grey); padding:8px 10px; cursor:pointer; border-bottom:2px solid transparent;}
+  .ribbon .rtab.active{color:var(--ms-blue); border-bottom-color:var(--ms-blue); font-weight:600;}
+  .ribbon .cmd{display:flex; align-items:center; gap:6px; font-size:13px; color:var(--ms-dark); padding:6px 9px; border-radius:4px; cursor:pointer; white-space:nowrap;}
+  .ribbon .cmd:hover{background:#f3f2f1;}
+  .ribbon .sep{width:1px; height:22px; background:var(--ms-line); margin:0 4px;}
+  .app{display:flex; height:calc(100vh - 88px);}
+  .nav{width:210px; background:#f3f2f1; border-right:1px solid var(--ms-line); padding:8px 0; flex-shrink:0; overflow:auto;}
+  .newmail{margin:4px 12px 10px; background:var(--ms-blue); color:#fff; border:none; border-radius:4px; padding:8px 10px; font-weight:600; display:flex; align-items:center; gap:8px; width:calc(100% - 24px);}
+  .navsec{padding:8px 16px 2px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--ms-grey2); display:flex; align-items:center; gap:6px;}
+  .acctline{padding:8px 12px 4px 14px; font-size:12px; font-weight:600; color:var(--ms-dark); display:flex; align-items:center; gap:6px;}
+  .folder{padding:6px 12px 6px 22px; display:flex; align-items:center; gap:10px; cursor:pointer; color:var(--ms-dark); font-size:13px;}
   .folder:hover{background:#eae9e8;}
-  .folder.active{background:#e1efff; font-weight:600; border-left:3px solid var(--ms-blue); padding-left:13px;}
+  .folder.active{background:#e1efff; font-weight:600; border-left:3px solid var(--ms-blue); padding-left:19px;}
   .folder .count{margin-left:auto; color:var(--ms-grey); font-size:12px;}
   .nav .hd{padding:6px 16px; font-size:11px; text-transform:uppercase; letter-spacing:.4px; color:var(--ms-grey2); margin-top:8px;}
+  .addacct{padding:8px 16px; font-size:12px; color:var(--ms-blue); cursor:pointer; border-top:1px solid var(--ms-line); margin-top:8px;}
+  /* focused/other tabs + date groups */
+  .pivot{display:flex; gap:18px; padding:8px 16px 0; border-bottom:1px solid var(--ms-line);}
+  .pivot .pv{font-size:13px; color:var(--ms-grey); padding-bottom:8px; cursor:pointer; border-bottom:2px solid transparent;}
+  .pivot .pv.active{color:var(--ms-dark); font-weight:600; border-bottom-color:var(--ms-blue);}
+  .daygroup{padding:8px 16px 4px; font-size:12px; font-weight:600; color:var(--ms-blue); background:#fff; position:sticky; top:0;}
   .list{width:380px; border-right:1px solid var(--ms-line); background:#fff; display:flex; flex-direction:column; flex-shrink:0;}
   .list .lhead{padding:10px 16px; border-bottom:1px solid var(--ms-line); display:flex; align-items:center;}
   .list .lhead h2{font-size:16px;}
@@ -130,23 +146,38 @@
       <div class="avatar" title="Accounts Payable — SuccessfulMockMaritimeCarrier">AP</div>
     </div>
   </div>
+  <div class="ribbon">
+    <div class="rtabs">
+      <span class="rtab">File</span><span class="rtab active">Home</span>
+      <span class="rtab">View</span><span class="rtab">Help</span>
+    </div>
+    <div class="cmd">✉ New mail</div><div class="sep"></div>
+    <div class="cmd">🗑 Delete</div><div class="cmd">📁 Archive</div><div class="cmd">↩ Reply</div>
+    <div class="cmd">↪ Forward</div><div class="sep"></div>
+    <div class="cmd">🚩 Flag</div><div class="cmd">✓ Mark read</div>
+  </div>
   <div class="app">
     <div class="nav">
-      <div class="mbxowner">
-        <div class="avatar2">AP</div>
-        <div><div class="mbxname">Accounts Payable</div>
-          <div class="mbxmail">SuccessfulMockMaritimeCarrier</div></div>
-      </div>
       <div class="newmail">✉&nbsp; New mail</div>
+      <div class="navsec">★ Favorites</div>
       <div class="folder active">📥 Inbox <span class="count" id="inboxCount"></span></div>
-      <div class="folder">📤 Sent Items</div><div class="folder">📝 Drafts</div>
-      <div class="folder">🗑 Deleted Items</div><div class="folder">⚠ Junk Email</div>
+      <div class="folder">🛡 Verified</div>
+      <div class="folder">🚫 Blocked</div>
+      <div class="acctline">▾ accountspayable@successfulmockmaritimecarrier.com</div>
+      <div class="folder">📥 Inbox</div>
+      <div class="folder">📝 Drafts</div>
+      <div class="folder">📤 Sent Items</div>
+      <div class="folder">🗑 Deleted Items</div>
+      <div class="folder">⚠ Junk Email</div>
       <div class="folder">📁 Archive</div>
+      <div class="folder">🗒 Notes</div>
       <div class="hd">ShipShield add-in</div>
       <div class="folder">🛡 Verified</div><div class="folder">🚫 Blocked</div>
+      <div class="addacct">+ Add account</div>
     </div>
     <div class="list">
       <div class="lhead"><h2>Inbox</h2><span class="filter">Filter ⌄</span></div>
+      <div class="pivot"><span class="pv active">Focused</span><span class="pv">Other</span></div>
       <div class="msgs" id="msgs"><div class="loading">Loading inbox…</div></div>
     </div>
     <div class="read" id="read"></div>
@@ -174,12 +205,25 @@ const addrOnly=s=>s.includes("<")?s.replace(/.*<|>.*/g,""):s;
 
 async function init(){
   const r=await fetch("mailbox/emails"); EMAILS=await r.json();
+  EMAILS.sort((a,b)=> new Date(b.date) - new Date(a.date));   // newest first, like Outlook
   renderList(); if(EMAILS.length) openEmail(EMAILS[0].id);
+}
+const _WD=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], _MO=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function dayLabel(e){
+  const d=new Date(e.date);
+  if(isNaN(d)) return "Earlier";
+  return `${_WD[d.getUTCDay()]} ${d.getUTCDate()} ${_MO[d.getUTCMonth()]}`;
 }
 function renderList(){
   const c=document.getElementById("msgs"); c.innerHTML="";
   document.getElementById("inboxCount").textContent=EMAILS.filter(e=>e.unread).length;
+  let lastGroup=null;
   EMAILS.forEach(e=>{
+    const group=dayLabel(e);
+    if(group!==lastGroup){
+      const h=document.createElement("div"); h.className="daygroup"; h.textContent=group;
+      c.appendChild(h); lastGroup=group;
+    }
     const d=document.createElement("div");
     d.className="msg"+(e.unread?" unread":"")+(e.id===activeId?" active":"");
     d.onclick=()=>openEmail(e.id);
