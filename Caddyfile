@@ -1,0 +1,41 @@
+# ShipShield — local reverse proxy (Caddy) for clean, port-free demo URLs.
+#
+#   brew install caddy
+#   sudo caddy run --config Caddyfile          # binding port 80 needs sudo
+#
+# Map the hostnames to your machine in /etc/hosts (all resolve to 127.0.0.1):
+#   127.0.0.1   ship-shield.local
+#   127.0.0.1   dashboard.ship-shield.local
+#
+# Start the apps first (Caddy just forwards to them):
+#   uvicorn bl_scanner_app:app --host 0.0.0.0 --port 8502   # B/L scanner (/) + AP mailbox (/mailbox)
+#   streamlit run enhanced_ui.py                            # analyst dashboard (port 8501)
+
+# Primary product: B/L scanner at / and the Accounts Payable mailbox at /mailbox.
+ship-shield.local {
+	reverse_proxy localhost:8502
+}
+
+# Internal analyst dashboard (Streamlit).
+dashboard.ship-shield.local {
+	reverse_proxy localhost:8501
+}
+
+# Result (no port in the URL):
+#   http://ship-shield.local/            -> B/L scanner
+#   http://ship-shield.local/mailbox     -> Accounts Payable mailbox
+#   http://dashboard.ship-shield.local/  -> Streamlit dashboard
+#
+# Prefer the mailbox as the landing page? swap the proxy on ship-shield.local to
+# `reverse_proxy localhost:8502` (already) and tell people to open /mailbox, or add a
+# redirect:  redir / /mailbox 302
+
+# ── Going public, with automatic HTTPS ───────────────────────────────────────
+# Register a real domain you own and Caddy fetches/renews a TLS certificate for you
+# (Let's Encrypt, via ACME) — no extra flags. Replace the local block with, e.g.:
+#
+# app.shipshield.example {
+# 	reverse_proxy localhost:8502
+# }
+#
+# Then run `caddy run --config Caddyfile` on the public host (ports 80/443 open).

@@ -472,9 +472,23 @@ not a public domain and needs no DNS registration.
    - B/L scanner: `http://ship-shield.local:8502/`
    - AP mailbox:  `http://ship-shield.local:8502/mailbox`
 
-The app's links are host-agnostic, so nothing else changes. For a genuinely public,
-HTTPS URL (e.g. `app.ship-shield.com`) you'd register a real domain and put the app
-behind a reverse proxy such as Caddy or Nginx with a TLS certificate.
+The app's links are host-agnostic, so nothing else changes.
+
+### Optional — drop the port number (Caddy reverse proxy)
+
+To serve at `http://ship-shield.local/` (no `:8502`), put a reverse proxy on port 80.
+A ready-to-use [`Caddyfile`](./Caddyfile) is included:
+
+```bash
+brew install caddy
+sudo caddy run --config Caddyfile     # port 80 needs sudo
+```
+
+It maps `ship-shield.local` → the FastAPI app (B/L scanner at `/`, mailbox at `/mailbox`)
+and `dashboard.ship-shield.local` → the Streamlit dashboard. Add both names to
+`/etc/hosts` (each `127.0.0.1`). For a **genuinely public, HTTPS** URL, point the
+Caddyfile at a real domain you own and Caddy obtains/renews a TLS certificate
+automatically — see the comments at the bottom of the `Caddyfile`.
 
 ---
 
