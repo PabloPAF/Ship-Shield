@@ -21,7 +21,7 @@ from io import BytesIO
 from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from groq import Groq
@@ -348,6 +348,24 @@ async def mailbox_emails():
 async def mailbox_audit(limit: int = 50):
     """Return recent audit entries plus a hash-chain integrity check."""
     return JSONResponse({"chain": audit_log.verify_chain(), "entries": audit_log.tail(limit)})
+
+
+@app.get("/mailbox/attachment/{email_id}")
+async def mailbox_attachment(email_id: str):
+    """Serve the email's attached document (the invoice/B-L PDF) for inline viewing."""
+    entry = next((e for e in _load_inbox() if e["id"] == email_id), None)
+    if entry is None:
+        raise HTTPException(status_code=404, detail=f"Email id '{email_id}' not found.")
+    ingested = ingest_eml((INBOX_DIR / entry["file"]).read_bytes())
+    atts = ingested.get("attachments", [])
+    if not atts:
+        raise HTTPException(status_code=404, detail="No attachment on this email.")
+    a = atts[0]
+    return Response(
+        content=a["bytes"],
+        media_type=a.get("content_type", "application/pdf"),
+        headers={"Content-Disposition": f'inline; filename="{a.get("filename", "attachment.pdf")}"'},
+    )
 
 
 @app.post("/mailbox/check")

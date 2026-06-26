@@ -35,6 +35,8 @@
   .folder.active .navico{color:var(--ms-blue);}
   .cmdico{width:15px; height:15px; flex-shrink:0;}
   .clip{width:13px; height:13px; flex-shrink:0; color:var(--ms-grey2); vertical-align:-2px;}
+  .rowclip{margin-left:8px; flex-shrink:0; cursor:pointer; display:flex; align-items:center; color:var(--ms-grey2); padding:2px; border-radius:4px;}
+  .rowclip:hover{color:var(--ms-blue); background:#e8eef6;}
   /* auto-scan status bar in the reading pane */
   .ssbar{padding:10px 24px; border-bottom:1px solid var(--ms-line); display:flex; align-items:center; gap:12px; background:#fbfbfa;}
   .ssbar.clickable{cursor:pointer;} .ssbar.clickable:hover{background:#f3f6fa;}
@@ -303,9 +305,11 @@ function renderList(){
     d.onclick=()=>openEmail(e.id);
     d.innerHTML=`<div class="bar"></div><div class="av" style="background:${esc(e.color)}">${esc(initials(e.from))}</div>
       <div class="body"><div class="l1"><span class="from">${esc(senderName(e.from))}</span>
-        <svg class="clip" title="Has attachment"><use href="#i-clip"/></svg><span class="time">${esc(e.time)}</span></div>
+        <span class="time">${esc(e.time)}</span>
+        <span class="rowclip" title="Open attached ${esc(e.invoice.number)}.pdf"
+          onclick="event.stopPropagation(); openAttachment('${esc(e.id)}')"><svg class="clip"><use href="#i-clip"/></svg></span></div>
       <div class="subj">${esc(e.subject)}</div>
-      <div class="prev"><svg class="clip"><use href="#i-clip"/></svg> ${esc(e.invoice.number)}.pdf — ${esc(e.invoice.vessel)}</div></div>`;
+      <div class="prev">${esc(e.invoice.number)}.pdf — ${esc(e.invoice.vessel)}</div></div>`;
     c.appendChild(d);
   });
 }
@@ -380,6 +384,7 @@ async function runCheck(id){
   bar.classList.add("clickable"); bar.onclick=openPanel;
 }
 function openPanel(){ if(lastData) showPanel(lastEmail, lastData); }
+function openAttachment(id){ window.open("/mailbox/attachment/"+encodeURIComponent(id), "_blank"); }
 function statusColor(s){
   s=(s||"").toUpperCase();
   if(["FAIL","HIGH","BLOCKED"].includes(s)) return "red";
