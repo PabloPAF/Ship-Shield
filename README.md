@@ -57,4 +57,4 @@ Then open your browser and drag-drop a Bill of Lading image (JPEG / PNG / WebP) 
 
 ---
 
-*Built by Akar Sarpal, Anup Bangalore, Pablo Fernandez, Vicky Kohnen — Cybersecurity / Hack Tank (2026)*
+*Built for the Cybersecurity / Hack Tank (2026).*

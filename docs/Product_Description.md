@@ -283,7 +283,7 @@ print(result.json())
 | Role | Name |
 |---|---|
 | Project Lead | Janani N |
-| Team Members | Akar Sarpal, Anup Bangalore, Pablo Fernandez, Vicky Kohnen |
+| Team Members | ShipShield team |
 | Module | Cybersecurity — Hack Tank |
 | Date | 2026-06-25 |
 
